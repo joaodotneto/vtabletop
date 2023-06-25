@@ -1,0 +1,719 @@
+<html>
+<head>
+    <link rel="stylesheet" href="bootstrap.min.css" />
+    <script type="text/javascript" src="jquery.min.js"></script>
+    <script type="text/javascript" src="bootstrap.min.js"></script>
+    <style type="text/css">
+        @font-face {
+            font-family: "Tormenta";
+            src: url(fonts/Tormenta.ttf);
+        }
+
+        .glyphicon {
+            top: 3px !important;
+        }
+
+        .btnl-lg {
+            height: 34px !important;
+        }
+
+        .app-title {
+            font-family: Tormenta;
+            font-size: 18px;
+            margin-left: 10px;
+            display: none;
+        }
+
+        @media screen and (min-width: 1300px) {
+            .app-title {
+                display: block;
+            }
+        }
+
+        body {
+            background-color: #ddd;
+            margin: 0;
+            padding: 0;
+        }
+
+        .right-bar {
+            position: absolute;
+            right: 0;
+            top: 40px;
+            width: 62px;
+            height: 200px;
+        }
+
+        .block {
+            width: 1in;
+            height: 1in;
+            border-right: 1px solid gray;
+            border-bottom: 1px solid gray;
+        }
+
+        .content {
+            background-color: black;
+            position: absolute;
+            left: 0;
+            right: 70px;
+            top: 40px;
+            bottom: 0;
+            border-top: 1px solid gray;
+        }
+
+        .lbl-chk {
+            font-weight: normal !important;
+            font-size: 14px;
+            margin-top: 2px;
+        }
+
+        .object-panel {
+            position: absolute;
+            z-index: 1000;
+            width: 300px;
+            height: 400px;
+            background: #ccc;
+            top: 41px;
+            right: 71px;
+            padding: 10px;
+        }
+
+        .rem-select {
+            user-select: none;
+        }
+    </style>
+    <script type="text/javascript">
+        var canvasObj = null;
+        var canvasCtx = null;
+        var currentX = 0;
+        var currentY = 0;
+        var isDraggable = false;
+        var currentImg = new Image();
+        var currentImgB64 = null;
+        var AMMOUNT = 96;
+        var SCROLL_SENSITIVITY = 0.0005;
+
+        var lastValueZoom = 1.0;
+        var cameraZoom = 1.0;
+
+        //Escurecimento da tela
+        var currentDarken = 0;
+
+        var MAX_ZOOM = 5
+        var MIN_ZOOM = 0.1
+        var ctrlKey = false;
+        var shftKey = false;
+
+        var lastMouseX = 0;
+        var lastMouseY = 0;
+        var lastSelectedFileName = "Map";
+        var showObjectPanel = false;
+
+        function Draw() {
+            canvasObj.width = window.innerWidth;
+            canvasObj.height = window.innerHeight;
+
+            canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
+
+            var cmpX = parseInt($("#numCompX").val());
+            var cmpY = parseInt($("#numCompY").val());
+            var rott = $("#chkHorizontal").prop("checked");
+            var grid = $("#chkShowGrid").prop("checked");
+            var cord = $("#chkShowCoords").prop("checked");
+            AMMOUNT = parseInt($("#numBox").val());
+
+            if (rott) {
+                var centerX = (currentImg.width) / 2;
+                var centerY = (currentImg.height) / 2;
+                canvasCtx.translate(centerX, centerY);
+                canvasCtx.rotate((90 * Math.PI) / 180);
+                canvasCtx.translate(-centerX, -centerY);
+            }
+
+            canvasCtx.drawImage(currentImg, currentX + cmpX, currentY + cmpY,
+                currentImg.width * cameraZoom,
+                currentImg.height * cameraZoom);
+
+            /*
+            Fog of War
+            // Create gradient, from middle to borders
+            var size = AMMOUNT * 6;
+            var gradient = canvasCtx.createRadialGradient(150, 150, 0, 150, 150, 150);
+            // Opaque white in the middle
+            gradient.addColorStop(0, 'rgba(255,255,255,0)');
+            // Transparent white at the borders
+            gradient.addColorStop(1, 'rgba(255,255,255,1)');
+
+            canvasCtx.globalCompositeOperation = 'destination-out';
+            canvasCtx.fillStyle = gradient;
+            canvasCtx.fillRect(0, 0, size, size);
+            */
+
+            if (currentDarken > 0) {
+                canvasCtx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
+                canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
+            }
+
+            if (rott) {
+                canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
+            }
+
+            var stepsV = (window.innerWidth / AMMOUNT) + 1;
+            var stepsH = (window.innerHeight / AMMOUNT) + 1;
+
+            if (grid) {
+                for (var i = 0; i < stepsV; i++) {
+                    if (i > 0) {
+                        var pos = (i * AMMOUNT) - 1;
+                        DrawVerLine(pos);
+                    }
+                }
+                for (var j = 0; j < stepsH; j++) {
+                    if (j > 0) {
+                        var pos = (j * AMMOUNT) - 1;
+                        DrawHorLine(pos);
+                    }
+                }
+            }
+            if (cord) DrawCoordsFull(stepsV, stepsH);
+            /*
+            var cc = hexToRgb($("#numColor").val());
+            canvasCtx.fillStyle = `rgba(${cc.r}, ${cc.g}, ${cc.b}, 0.5)`;
+            canvasCtx.fillRect((lastMouseX * AMMOUNT), (lastMouseY * AMMOUNT), AMMOUNT, AMMOUNT);
+            */
+        }
+
+        function DrawCoordsFull(stepsV, stepsH) {
+            //####################################
+            canvasCtx.save();
+            canvasCtx.font = "bold 18px Arial";
+            canvasCtx.fillStyle = "#ffffff";
+            for (var i = 0; i < stepsV; i++) {
+                for (var j = 0; j < stepsH; j++) {
+                    DrawCoords(i, j);
+                }
+            }
+            canvasCtx.restore();
+            //canvasCtx.translate(0, 0);
+            //canvasCtx.rotate(Math.PI / 2);
+            //for (var i = 0; i < stepsV; i++) {
+            //    for (var j = 0; j < stepsH; j++) {
+            //        DrawCoordsVert(j, i);
+            //    }
+            //}
+
+            //####################################
+        }
+
+        function DrawCoordsVert(x, y) {
+            canvasCtx.fillText(`${x}-${y}`, (x * AMMOUNT) + 4, (y * AMMOUNT) - 8);
+        }
+
+        function DrawCoords(x, y) {
+            canvasCtx.fillText(`${(x+1)}-${(y)}`, (x * AMMOUNT) + 4, (y * AMMOUNT) - 8);
+        }
+
+        function hexToRgb(hex) {
+            var result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+            return result ? {
+                r: parseInt(result[1], 16),
+                g: parseInt(result[2], 16),
+                b: parseInt(result[3], 16)
+            } : null;
+        }
+
+        function AdjustZoom(zoomAmount, zoomFactor) {
+            if (zoomAmount) {
+                cameraZoom += zoomAmount;
+            }
+            else if (zoomFactor) {
+                cameraZoom = zoomFactor * lastZoom;
+            }
+            cameraZoom = Math.min(cameraZoom, MAX_ZOOM);
+            cameraZoom = Math.max(cameraZoom, MIN_ZOOM);
+        }
+
+        var Keys = {
+            Up: 38,
+            Down: 40,
+            Right: 39,
+            Left: 37
+        }
+
+        $(document).ready(() => {
+            canvasObj = document.getElementById("baseCanvas");
+            canvasCtx = canvasObj.getContext("2d");
+            canvasCtx.canvas.width = window.innerWidth;
+            canvasCtx.canvas.height = window.innerHeight;
+
+            canvasObj.addEventListener("mouseup", (e) => {
+                //TODO: Se houver ações de colocação ou retirada, devem vir aqui
+                if (false) {
+
+                } else {
+                    //ShowHideObjectPanel(true);
+                }
+            });
+
+            canvasObj.addEventListener("mousemove", (e) => {
+                AMMOUNT = parseInt($("#numBox").val());
+                var cr = canvasObj.getBoundingClientRect();
+                var mr = new DOMPoint(e.clientX, e.clientY, 0, 0);
+                var mx = parseInt((mr.x - cr.left) / AMMOUNT);
+                var my = parseInt((mr.y - cr.top) / AMMOUNT);
+
+                if (lastMouseX != mx || lastMouseY != my) {
+                    lastMouseX = mx;
+                    lastMouseY = my;
+                    //ResetCanvas();
+                }
+            });
+
+            canvasObj.addEventListener('wheel', (e) => {
+                if (!shftKey) return;
+                var newVal = e.deltaY * SCROLL_SENSITIVITY;
+                var numCompZ = $("#numCompZ");
+                var curVal = parseFloat(numCompZ.val());
+                curVal += (newVal > 0 ? 0.01 : -0.01);
+                numCompZ.val(curVal);
+                SetCanvasZoom();
+            });
+
+            $('html').keydown(function (e) {
+                var keyCode = e.which ?? e.keyCode;
+                ctrlKey = e.ctrlKey;
+                shftKey = e.shiftKey;
+                var cmpX = false;
+                var cmpY = false;
+
+                var rott = $("#chkHorizontal").prop("checked");
+                var isMoveKey = ExecuteMove(keyCode, shftKey, rott);
+
+                switch (keyCode) {
+                    case Keys.Down:
+                    case Keys.Up:
+                        cmpY = true;
+                        break;
+
+                    case Keys.Left:
+                    case Keys.Right:
+                        cmpX = true;
+                        break;
+                }
+
+                if (isMoveKey) {
+                    var numCompX = $("#numCompX");
+                    var numCompY = $("#numCompY");
+                    var valX = parseInt(numCompX.val());
+                    var valY = parseInt(numCompY.val());
+                    if (shftKey) { //Complementos
+                        if (cmpX) {
+                            var calc = ((keyCode == (rott ? Keys.Left : Keys.Right)) ? 1 : -1) * 1;
+                            if (rott) {
+                                valY += calc;
+                            } else {
+                                valX += calc;
+                            }
+                        }
+                        if (cmpY) {
+                            var calc = ((keyCode == Keys.Down) ? 1 : -1) * 1;
+                            if (rott) {
+                                valX += calc;
+                            } else {
+                                valY += calc;
+                            }
+                        }
+                        numCompX.val(valX);
+                        numCompY.val(valY);
+                    }
+                    ResetCanvas();
+                    e.preventDefault();
+                }
+            });
+        });
+
+        function ExecuteMove(keyCode, shftKey, rott) {
+            AMMOUNT = parseInt($("#numBox").val());
+            var ammount = ctrlKey ? (AMMOUNT / 2) : AMMOUNT;
+
+            switch (keyCode) {
+                case Keys.Down:
+                case Keys.Up:
+                    var calc = (shftKey ? 0 : ((keyCode == Keys.Down) ? -1 : 1) * ammount);
+                    if (rott) {
+                        currentX += calc;
+                    } else {
+                        currentY += calc;
+                    }
+                    return true;
+                    break;
+
+                case Keys.Left:
+                case Keys.Right:
+                    var calc = (shftKey ? 0 : ((keyCode == (rott ? Keys.Left : Keys.Right)) ? -1 : 1) * ammount);
+                    if (rott) {
+                        currentY += calc;
+                    } else {
+                        currentX += calc;
+                    }
+                    return true;
+                    break;
+            }
+            return false;
+        }
+
+        function SetCanvasZoom() {
+            var newZoom = parseFloat($("#numCompZ").val());
+            var diffZoom = lastValueZoom > newZoom ? -0.01 : 0.01;
+            lastValueZoom = newZoom;
+            AdjustZoom(diffZoom);
+            ResetCanvas();
+        }
+
+        function ResetAdjusts() {
+            $("#numCompX").val("0");
+            $("#numCompY").val("0");
+            $("#numCompZ").val("1");
+            $("#numBox").val("96");
+            lastValueZoom = 0;
+            cameraZoom = 1;
+            currentX = 0;
+            currentY = 0;
+            canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
+            ResetCanvas();
+        }
+
+        function DrawHorLine(y) {
+            DrawLine(0, y, window.innerWidth, y);
+        }
+
+        function DrawVerLine(x) {
+            DrawLine(x, 0, x, window.innerHeight);
+        }
+
+        function DrawLine(x1, y1, x2, y2) {
+            canvasCtx.beginPath();
+            canvasCtx.moveTo(x1, y1);
+            canvasCtx.lineTo(x2, y2);
+            canvasCtx.closePath();
+            canvasCtx.lineWidth = 2;
+            canvasCtx.strokeStyle = $("#numColor").val();
+            canvasCtx.stroke();
+        }
+
+        function ResetCanvas() {
+            Draw();
+        }
+
+        function SaveImageBase(img) {
+            var canvas = document.getElementById('saveCanvas');
+            var ctx = canvas.getContext('2d');
+            canvas.height = img.naturalHeight;
+            canvas.width = img.naturalWidth;
+            ctx.drawImage(img, 0, 0);
+            currentImgB64 = canvas.toDataURL('image/jpeg');
+        }
+
+        function LoadBackground() {
+            $("#uploadFile").unbind("change").change(function (e) {
+                var file = e.currentTarget.files[0];
+                currentImg.onload = function () {
+                    SaveImageBase(this);
+                    ResetCanvas();
+                }
+                currentImg.src = URL.createObjectURL(file);
+                $("#uploadFile").val("");
+            });
+            $("#uploadFile").trigger("click");
+        }
+
+        function WriteSettings() {
+            var newName = window.prompt("Map Name", lastSelectedFileName);
+            if (!newName) return;
+            var objOut = {
+                Box: $("#numBox").val(),
+                X: $("#numCompX").val(),
+                Y: $("#numCompY").val(),
+                Z: $("#numCompZ").val(),
+                R: $("#chkHorizontal").prop("checked"),
+                G: $("#chkShowGrid").prop("checked"),
+                PX: currentX,
+                PY: currentY,
+                Color: $("#numColor").val(),
+                Image: currentImgB64
+            };
+            var strData = JSON.stringify(objOut);
+            const link = document.createElement("a");
+            const file = new Blob([strData], { type: 'text/plain' });
+            link.href = URL.createObjectURL(file);
+            link.download = newName + ".json";
+            link.click();
+            URL.revokeObjectURL(link.href);
+        }
+
+        function ReadSettings() {
+            $("#uploadSettings").unbind("change").change(function (e) {
+                var file = e.currentTarget.files[0];
+                lastSelectedFileName = file.name.replace(".json", "");
+                var reader = new FileReader();
+                reader.onload = function () {
+                    var objInp = JSON.parse(reader.result);
+
+                    currentX = objInp.PX;
+                    currentY = objInp.PY;
+
+                    $("#numBox").val(objInp.Box);
+                    $("#numCompX").val(objInp.X);
+                    $("#numCompY").val(objInp.Y);
+                    $("#numCompZ").val(objInp.Z);
+                    $("#numColor").val(objInp.Color);
+                    $("#chkHorizontal").prop("checked", objInp.R);
+                    $("#chkShowGrid").prop("checked", objInp.G);
+
+                    currentImg.onload = function () {
+                        SaveImageBase(this);
+                        ResetCanvas();
+                    }
+                    currentImg.src = objInp.Image;
+                };
+                reader.readAsText(file);
+                $("#uploadSettings").val("");
+            });
+            $("#uploadSettings").trigger("click");
+        }
+
+        function AddValueToField(field, value, convertFunc) {
+            var currVal = convertFunc($(field).val());
+            currVal += value;
+            $(field).val(currVal);
+        }
+
+        function ExecuteCommand(cmd) {
+            var rott = $("#chkHorizontal").prop("checked");
+            switch (cmd) {
+                case 0: //BX+
+                    AddValueToField("#numBox", 1, parseInt);
+                    ResetCanvas();
+                    break;
+                case 1: //BX-
+                    AddValueToField("#numBox", -1, parseInt);
+                    ResetCanvas();
+                    break;
+                case 2: //ZM+
+                    AddValueToField("#numCompZ", 0.01, parseFloat);
+                    SetCanvasZoom();
+                    break;
+                case 3: //ZM-
+                    AddValueToField("#numCompZ", -0.01, parseFloat);
+                    SetCanvasZoom();
+                    break;
+                case 4: //CX+
+                    AddValueToField("#numCompX", 1, parseInt);
+                    ResetCanvas();
+                    break;
+                case 5: //CX-
+                    AddValueToField("#numCompX", -1, parseInt);
+                    ResetCanvas();
+                    break;
+                case 6: //CY+
+                    AddValueToField("#numCompY", 1, parseInt);
+                    ResetCanvas();
+                    break;
+                case 7: //CY-
+                    AddValueToField("#numCompY", -1, parseInt);
+                    ResetCanvas();
+                    break;
+
+                case 8: //Up
+                    ExecuteMove(Keys.Up, false, rott);
+                    ResetCanvas();
+                    break;
+                case 9: //Down
+                    ExecuteMove(Keys.Down, false, rott);
+                    ResetCanvas();
+                    break;
+                case 10: //Left
+                    ExecuteMove(Keys.Left, false, rott);
+                    ResetCanvas();
+                    break;
+                case 11: //Right
+                    ExecuteMove(Keys.Right, false, rott);
+                    ResetCanvas();
+                    break;
+                case 12: //Configure Objects
+                    ShowHideObjectPanel(false);
+                    break;
+            }
+        }
+
+        function ShowHideObjectPanel(forceHide) {
+            showObjectPanel = forceHide ? false : !showObjectPanel;
+            $("#objectPanel").css("display", showObjectPanel ? "" : "none");
+        }
+
+        function SetBoxValue(value) {
+            $("#numBox").val(value);
+            ResetCanvas();
+        }
+    </script>
+</head>
+<body>
+    <div>
+        <div style="display: none">
+            <input type="file" id="uploadFile" accept="image/*" />
+            <input type="file" id="uploadSettings" accept=".json" />
+            <canvas id="saveCanvas"></canvas>
+        </div>
+        <table style="width: 100%; margin-top: 4px;">
+            <tr>
+                <td>
+                    <div class="app-title">Deploy Games Simple Virtual TableTop</div>
+                </td>
+                <td style="width: 130px">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon" style="font-weight: bold">Box:</span>
+                        <input type="number" class="form-control input-sm" min="48" max="128" step="1" id="numBox" value="96" onblur="ResetCanvas()" />
+                        <div class="input-group-btn">
+                            <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></button>
+                            <ul class="dropdown-menu" style="min-width: 50px !important;">
+                                <li><a onclick="SetBoxValue('48')">48</a></li>
+                                <li><a onclick="SetBoxValue('72')">72</a></li>
+                                <li><a onclick="SetBoxValue('96')">96</a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </td>
+                <td style="width: 4px">&nbsp;</td>
+                <td style="width: 120px">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon" style="font-weight: bold">Zoom:</span>
+                        <input type="number" class="form-control input-sm" min="0.01" max="2" step=".01" id="numCompZ" value="1" onchange="SetCanvasZoom()" pattern="^\d*(\.\d{0,2})?$" />
+                    </div>
+                </td>
+                <td style="width: 4px">&nbsp;</td>
+                <td style="width: 100px">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon" style="font-weight: bold">CX:</span>
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompX" value="0" onblur="ResetCanvas()" />
+                    </div>
+                </td>
+                <td style="width: 4px">&nbsp;</td>
+                <td style="width: 100px">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon" style="font-weight: bold">CY:</span>
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompY" value="0" onblur="ResetCanvas()" />
+                    </div>
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td style="width: 195px">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="LoadBackground()" title="Background">
+                                <i class="glyphicon glyphicon-picture"></i>
+                            </a>
+                            <a class="btn btn-default" onclick="WriteSettings()" title="Save Settings">
+                                <i class="glyphicon glyphicon-save"></i>
+                            </a>
+                            <a class="btn btn-default" onclick="ReadSettings()" title="Load Settings">
+                                <i class="glyphicon glyphicon-open"></i>
+                            </a>
+                            <a class="btn btn-default" onclick="ResetAdjusts()" title="Reset">
+                                <i class="glyphicon glyphicon-refresh"></i>
+                            </a>
+                        </div>
+                        <input type="color" class="form-control input-sm" style="width: 60px" id="numColor"
+                               value="#ff0000" oninput="ResetCanvas()" />
+                    </div>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="right-bar">
+        <div class="btn-group btn-group-vertical">
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(8)">
+                <i class="glyphicon glyphicon-arrow-up"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(9)">
+                <i class="glyphicon glyphicon-arrow-down"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(10)">
+                <i class="glyphicon glyphicon-arrow-left"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(11)">
+                <i class="glyphicon glyphicon-arrow-right"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(0)">BX+</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(1)">BX-</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(2)">ZM+</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(3)">ZM-</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(4)">CX+</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(5)">CX-</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(6)">CY+</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(7)">CY-</a>
+            <!--<a class="btn btn-default btnl-lg" onclick="ExecuteCommand(12)" title="Configure Objects">
+                <i class="glyphicon glyphicon-bookmark"></i>
+            </a>-->
+        </div>
+        <div class="form-group form-group-sm" style="margin-left: 3px;">
+            <label for="chkShowGrid" class="rem-select" title="Show/Hide Grid">
+                <input type="checkbox" id="chkShowGrid" checked="checked" onclick="ResetCanvas()">&nbsp;Grid
+            </label>
+            <label for="chkHorizontal" class="rem-select" title="Rotate Map">
+                <input type="checkbox" id="chkHorizontal" onclick="ResetCanvas()">&nbsp;Rot.
+            </label>
+            <label for="chkShowCoords" class="rem-select" title="Show/hide Coordinates">
+                <input type="checkbox" id="chkShowCoords" onclick="ResetCanvas()">&nbsp;Cord
+            </label>
+        </div>
+    </div>
+    <!--style="display: none"></div>-->
+    <div class="object-panel" id="objectPanel" style="display: none">
+        <table style="width: 100%;">
+            <tr>
+                <td><label>Object Manager</label></td>
+            </tr>
+            <tr>
+                <td>
+                    <table style="width: 100%" border="1">
+                        <tr>
+                            <td style="width: 120px">
+                                <img id="imgViewObject" width="120" height="120" />
+                            </td>
+                            <td style="width: 4px">&nbsp;</td>
+                            <td style="vertical-align: top">
+                                <table style="width: 100%" border="1">
+                                    <tr>
+                                        <td style="text-align: right;">
+                                            <div class="input-group input-group-sm">
+                                                <div class="input-group-btn">
+                                                    <a class="btn btn-default" onclick="ExecuteCommand(0)" title="Add Object">
+                                                        <i class="glyphicon glyphicon-plus-sign"></i>
+                                                    </a>
+                                                    <a class="btn btn-default" onclick="ExecuteCommand(0)" title="Save Object">
+                                                        <i class="glyphicon glyphicon-floppy-disk"></i>
+                                                    </a>
+                                                    <a class="btn btn-default" onclick="ExecuteCommand(0)" title="Remove Object">
+                                                        <i class="glyphicon glyphicon-remove"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <select class="form-control input-sm" style="height: 150px" multiple="multiple"></select>
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="content">
+        <canvas id="baseCanvas" style="width: calc(100% - 2px); height: calc(100% - 2px); border:1px solid #000000;"></canvas>
+    </div>
+</body>
+</html>
