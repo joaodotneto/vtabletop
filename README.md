@@ -3,6 +3,6 @@ Simple Virtual TableTop Display - [Demo Here](https://stingray-app-bkd5f.ondigit
 - Load Background;
 - Show Grid;
 - Show Coordinates;
-- Adjusts (X, Y Zoom);
+- Adjusts (X, Y, Zoom, Grid Color);
 - Box Sizes (With Defaults);
 - Save / Load Config Files (AKA Projects);
