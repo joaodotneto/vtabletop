@@ -1,0 +1,15 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/.vs/TableTop/FileContentIndex/read.lock
+/.vs/TableTop/FileContentIndex/abe017d4-9377-4ea9-9965-32aa2be3960d.vsidx
+/.vs/TableTop/FileContentIndex/61564877-725f-4b1c-974b-454ad78efb6a.vsidx
+/.vs/TableTop/FileContentIndex/5ce6f178-9864-4c78-b988-5f92d8bf9405.vsidx
+/.vs/TableTop/FileContentIndex/4f0df42d-e7e0-4143-8c6f-fa0c96bedc27.vsidx
+/.vs/TableTop/v17/.wsuo
+/.vs/TableTop/v17/.suo
+/.vs/TableTop/config
+/.vs/VSWorkspaceState.json
+/.vs/slnx.sqlite
+/.vs/ProjectSettings.json
