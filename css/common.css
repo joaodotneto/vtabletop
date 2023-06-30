@@ -1,0 +1,76 @@
+﻿@font-face {
+    font-family: "Tormenta";
+    src: url(../fonts/Tormenta.ttf);
+}
+
+#bootstrapFloatAlert {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    z-index: 5000;
+}
+
+.glyphicon {
+    top: 3px !important;
+}
+
+.btnl-lg {
+    height: 34px !important;
+}
+
+.app-title {
+    font-family: Tormenta;
+    font-size: 18px;
+    margin-left: 10px;
+    display: none;
+}
+
+.right-bar {
+    position: absolute;
+    right: 0;
+    top: 40px;
+    width: 62px;
+    height: 200px;
+}
+
+.block {
+    width: 1in;
+    height: 1in;
+    border-right: 1px solid gray;
+    border-bottom: 1px solid gray;
+}
+
+.content {
+    background-color: black;
+    position: absolute;
+    left: 0;
+    right: 70px;
+    top: 40px;
+    bottom: 0;
+    border-top: 1px solid gray;
+}
+
+.lbl-chk {
+    font-weight: normal !important;
+    font-size: 14px;
+    margin-top: 2px;
+}
+
+.object-panel {
+    position: absolute;
+    z-index: 1000;
+    width: 200px;
+    height: 400px;
+    background: #ccc;
+    top: 41px;
+    right: 71px;
+    padding: 10px;
+}
+
+.rem-select {
+    user-select: none;
+}
+
+.addon-60p {
+    min-width: 60px;
+}
