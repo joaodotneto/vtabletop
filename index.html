@@ -1,15 +1,25 @@
 <html>
 <head>
+    <meta http-equiv="cache-control" content="max-age=0" />
+    <meta http-equiv="cache-control" content="no-cache" />
+    <meta http-equiv="expires" content="0" />
+    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
+    <meta http-equiv="pragma" content="no-cache" />
+
     <link rel="stylesheet" href="css/bootstrap.min.css?1" />
-    <link rel="stylesheet" href="css/common.css?2" />
+    <link rel="stylesheet" href="css/common.css?5" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?1"></script>
+    <script type="text/javascript" src="js/common.js?4"></script>
     <style type="text/css">
         @media screen and (min-width: 1300px) {
             .app-title {
                 display: block;
             }
+        }
+
+        .layer-panel {
+            width: 315px;
         }
 
         body {
@@ -19,65 +29,22 @@
         }
     </style>
     <script type="text/javascript">
-        var LastOpenedHandle = null;
-        var canvasObj = null;
-        var canvasCtx = null;
-        var currentX = 0;
-        var currentY = 0;
-        var isDraggable = false;
-        var currentImg = new Image();
-        var currentImgB64 = null;
-        var AMMOUNT = 96;
-        var SCROLL_SENSITIVITY = 0.0005;
-
-        var lastValueZoom = 1.0;
-        var cameraZoom = 1.0;
-
-        //Escurecimento da tela
-        var currentDarken = 0;
-
-        var MAX_ZOOM = 5
-        var MIN_ZOOM = 0.1
-        var ctrlKey = false;
-        var shftKey = false;
-
-        var lastMouseX = 0;
-        var lastMouseY = 0;
-        var lastSelectedFileName = "Map";
-        var showObjectPanel = false;
-
-        var settingsWindow = null;
-        var domFileSystem = null;
-
-        async function NewFileHandle() {
-
-            return await window.showSaveFilePicker(opts);
-        }
-
         $(document).ready(() => {
-            window.addEventListener("message", (event) => {
-                var model = { cmd: "", parameters: [] };
-                debugger;
-            }, false);
-
             ConfigureCanvas();
-            //var left = canvasObj.width - 580;
-            //var top = 150;
-            //window.open("settings.html", "settings", `width=500,height=300,left=${left},top=145`);
         });
 
-        function Draw() {
+        function ResetCanvas() {
             canvasObj.width = window.innerWidth;
             canvasObj.height = window.innerHeight;
 
             canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
 
-            var cmpX = parseInt($("#numCompX").val());
-            var cmpY = parseInt($("#numCompY").val());
-            var rott = $("#chkHorizontal").prop("checked");
-            var grid = $("#chkShowGrid").prop("checked");
-            var cord = $("#chkShowCoords").prop("checked");
-            AMMOUNT = parseInt($("#numBox").val());
+            var cmpX = getInt("numCompX");
+            var cmpY = getInt("numCompY");
+            var rott = chkVal("chkHorizontal");
+            var grid = chkVal("chkShowGrid");
+            var cord = chkVal("chkShowCoords");
+            AMMOUNT = getInt("numBox");
 
             if (rott) {
                 var centerX = (currentImg.width) / 2;
@@ -86,6 +53,16 @@
                 canvasCtx.rotate((90 * Math.PI) / 180);
                 canvasCtx.translate(-centerX, -centerY);
             }
+
+            //Configurações do Parallax
+            showAnimation = chkVal("chkParallaxAnim");
+            parallaxDirection = chkVal("chkParallaxRtl");
+            parallaxVertical = chkVal("chkParallaxVertical");
+            parallaxSpeed = getFloat("numkParallaxSpeed");
+            parallaxX = getInt("numParallaxX");
+            parallaxY = getInt("numParallaxY");
+
+            DrawScroll();
 
             canvasCtx.drawImage(currentImg, currentX + cmpX, currentY + cmpY,
                 currentImg.width * cameraZoom,
@@ -110,6 +87,10 @@
                 canvasCtx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
                 canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
             }
+
+            layers.forEach((layer) => {
+                layer.draw();
+            });
 
             if (rott) {
                 canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -138,337 +119,6 @@
             canvasCtx.fillStyle = `rgba(${cc.r}, ${cc.g}, ${cc.b}, 0.5)`;
             canvasCtx.fillRect((lastMouseX * AMMOUNT), (lastMouseY * AMMOUNT), AMMOUNT, AMMOUNT);
             */
-        }
-
-        function DrawCoordsFull(stepsV, stepsH) {
-            //####################################
-            canvasCtx.save();
-            canvasCtx.font = "bold 18px Arial";
-            canvasCtx.fillStyle = "#ffffff";
-            for (var i = 0; i < stepsV; i++) {
-                for (var j = 0; j < stepsH; j++) {
-                    DrawCoords(i, j);
-                }
-            }
-            canvasCtx.restore();
-            //canvasCtx.translate(0, 0);
-            //canvasCtx.rotate(Math.PI / 2);
-            //for (var i = 0; i < stepsV; i++) {
-            //    for (var j = 0; j < stepsH; j++) {
-            //        DrawCoordsVert(j, i);
-            //    }
-            //}
-
-            //####################################
-        }
-
-        function DrawCoordsVert(x, y) {
-            canvasCtx.fillText(`${x}-${y}`, (x * AMMOUNT) + 4, (y * AMMOUNT) - 8);
-        }
-
-        function DrawCoords(x, y) {
-            canvasCtx.fillText(`${(x + 1)}-${(y)}`, (x * AMMOUNT) + 4, (y * AMMOUNT) - 8);
-        }
-
-        function AdjustZoom(zoomAmount, zoomFactor) {
-            if (zoomAmount) {
-                cameraZoom += zoomAmount;
-            }
-            else if (zoomFactor) {
-                cameraZoom = zoomFactor * lastZoom;
-            }
-            cameraZoom = Math.min(cameraZoom, MAX_ZOOM);
-            cameraZoom = Math.max(cameraZoom, MIN_ZOOM);
-        }
-
-        function ConfigureCanvas() {
-            canvasObj = document.getElementById("baseCanvas");
-            canvasCtx = canvasObj.getContext("2d");
-            canvasCtx.canvas.width = window.innerWidth;
-            canvasCtx.canvas.height = window.innerHeight;
-
-            canvasObj.addEventListener("mouseup", (e) => {
-                //TODO: Se houver ações de colocação ou retirada, devem vir aqui
-                if (false) {
-
-                } else {
-                    //ShowHideObjectPanel(true);
-                }
-            });
-
-            canvasObj.addEventListener("mousemove", (e) => {
-                AMMOUNT = parseInt($("#numBox").val());
-                var cr = canvasObj.getBoundingClientRect();
-                var mr = new DOMPoint(e.clientX, e.clientY, 0, 0);
-                var mx = parseInt((mr.x - cr.left) / AMMOUNT);
-                var my = parseInt((mr.y - cr.top) / AMMOUNT);
-
-                if (lastMouseX != mx || lastMouseY != my) {
-                    lastMouseX = mx;
-                    lastMouseY = my;
-                    //ResetCanvas();
-                }
-            });
-
-            canvasObj.addEventListener('wheel', (e) => {
-                if (!shftKey) return;
-                var newVal = e.deltaY * SCROLL_SENSITIVITY;
-                var numCompZ = $("#numCompZ");
-                var curVal = parseFloat(numCompZ.val());
-                curVal += (newVal > 0 ? 0.01 : -0.01);
-                numCompZ.val(curVal);
-                SetCanvasZoom();
-            });
-
-            $('html').keydown(function (e) {
-                var keyCode = e.which ?? e.keyCode;
-                ctrlKey = e.ctrlKey;
-                shftKey = e.shiftKey;
-                var cmpX = false;
-                var cmpY = false;
-
-                var rott = $("#chkHorizontal").prop("checked");
-                var isMoveKey = ExecuteMove(keyCode, shftKey, rott);
-
-                switch (keyCode) {
-                    case Keys.Down:
-                    case Keys.Up:
-                        cmpY = true;
-                        break;
-
-                    case Keys.Left:
-                    case Keys.Right:
-                        cmpX = true;
-                        break;
-                }
-
-                if (isMoveKey) {
-                    var numCompX = $("#numCompX");
-                    var numCompY = $("#numCompY");
-                    var valX = parseInt(numCompX.val());
-                    var valY = parseInt(numCompY.val());
-                    if (shftKey) { //Complementos
-                        if (cmpX) {
-                            var calc = ((keyCode == (rott ? Keys.Left : Keys.Right)) ? 1 : -1) * 1;
-                            if (rott) {
-                                valY += calc;
-                            } else {
-                                valX += calc;
-                            }
-                        }
-                        if (cmpY) {
-                            var calc = ((keyCode == Keys.Down) ? 1 : -1) * 1;
-                            if (rott) {
-                                valX += calc;
-                            } else {
-                                valY += calc;
-                            }
-                        }
-                        numCompX.val(valX);
-                        numCompY.val(valY);
-                    }
-                    ResetCanvas();
-                    e.preventDefault();
-                }
-            });
-        }
-
-        function ExecuteMove(keyCode, shftKey, rott) {
-            AMMOUNT = parseInt($("#numBox").val());
-            var ammount = ctrlKey ? (AMMOUNT / 2) : AMMOUNT;
-
-            switch (keyCode) {
-                case Keys.Down:
-                case Keys.Up:
-                    var calc = (shftKey ? 0 : ((keyCode == Keys.Down) ? -1 : 1) * ammount);
-                    if (rott) {
-                        currentX += calc;
-                    } else {
-                        currentY += calc;
-                    }
-                    return true;
-                    break;
-
-                case Keys.Left:
-                case Keys.Right:
-                    var calc = (shftKey ? 0 : ((keyCode == (rott ? Keys.Left : Keys.Right)) ? -1 : 1) * ammount);
-                    if (rott) {
-                        currentY += calc;
-                    } else {
-                        currentX += calc;
-                    }
-                    return true;
-                    break;
-            }
-            return false;
-        }
-
-        function SetCanvasZoom() {
-            var newZoom = parseFloat($("#numCompZ").val());
-            var diffZoom = lastValueZoom > newZoom ? -0.01 : 0.01;
-            lastValueZoom = newZoom;
-            AdjustZoom(diffZoom);
-            ResetCanvas();
-        }
-
-        function ResetAdjusts() {
-            $("#numCompX").val("0");
-            $("#numCompY").val("0");
-            $("#numCompZ").val("1");
-            $("#numBox").val("96");
-            lastValueZoom = 0;
-            cameraZoom = 1;
-            currentX = 0;
-            currentY = 0;
-            canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
-            ResetCanvas();
-        }
-
-        function DrawHorLine(y) {
-            DrawLine(0, y, window.innerWidth, y);
-        }
-
-        function DrawVerLine(x) {
-            DrawLine(x, 0, x, window.innerHeight);
-        }
-
-        function DrawLine(x1, y1, x2, y2) {
-            canvasCtx.beginPath();
-            canvasCtx.moveTo(x1, y1);
-            canvasCtx.lineTo(x2, y2);
-            canvasCtx.closePath();
-            canvasCtx.lineWidth = 2;
-            canvasCtx.strokeStyle = $("#numColor").val();
-            canvasCtx.stroke();
-        }
-
-        function ResetCanvas() {
-            Draw();
-        }
-
-        function SaveImageBase(img) {
-            var canvas = document.getElementById('saveCanvas');
-            var ctx = canvas.getContext('2d');
-            canvas.height = img.naturalHeight;
-            canvas.width = img.naturalWidth;
-            ctx.drawImage(img, 0, 0);
-            currentImgB64 = canvas.toDataURL('image/jpeg');
-        }
-
-        function LoadBackground() {
-            $("#uploadFile").unbind("change").change(function (e) {
-                var file = e.currentTarget.files[0];
-                currentImg.onload = function () {
-                    SaveImageBase(this);
-                    ResetCanvas();
-                }
-                currentImg.src = URL.createObjectURL(file);
-                $("#uploadFile").val("");
-            });
-            $("#uploadFile").trigger("click");
-        }
-
-        function WriteSettings() {
-            var objOut = {
-                Box: $("#numBox").val(),
-                X: $("#numCompX").val(),
-                Y: $("#numCompY").val(),
-                Z: $("#numCompZ").val(),
-                R: $("#chkHorizontal").prop("checked"),
-                G: $("#chkShowGrid").prop("checked"),
-                PX: currentX,
-                PY: currentY,
-                Color: $("#numColor").val(),
-                Image: currentImgB64
-            };
-            var strData = JSON.stringify(objOut);
-            const link = document.createElement("a");
-            const file = new Blob([strData], { type: 'text/plain' });
-            if (HasSaveFilePicker()) {
-                SaveFile(file);
-                return;
-            }
-            var newName = window.prompt("Map Name", lastSelectedFileName);
-            if (!newName) return;
-            link.href = URL.createObjectURL(file);
-            link.download = newName + ".json";
-            link.click();
-            URL.revokeObjectURL(link.href);
-        }
-
-        const OpenFile = async () => {
-            try {
-                [LastOpenedHandle] = await window.showOpenFilePicker(FileOptions);
-                var file = await LastOpenedHandle.getFile();
-                lastSelectedFileName = file.name.replace(".json", "");
-                var reader = new FileReader();
-                reader.onload = function () {
-                    ParseAndApplySettings(reader.result);
-                };
-                reader.readAsText(file);
-            } catch (err) {
-                console.log(err.name, err.message);
-                return null;
-            }
-        };
-
-        const SaveFile = async (blob) => {
-            try {
-                if (LastOpenedHandle == null) {
-                    LastOpenedHandle = await window.showSaveFilePicker(FileOptions);
-                }
-                var writable = await LastOpenedHandle.createWritable();
-                await writable.write(blob);
-                await writable.close();
-                BootstrapFloatAlert.success(`File '${LastOpenedHandle.name}' saved Sucessfully!`, ".content");
-            } catch (err) {
-                console.log(err.name, err.message);
-            }
-        };
-
-        function ReadSettings() {
-            if (HasOpenFilePicker()) {
-                OpenFile();
-                return;
-            }
-            $("#uploadSettings").unbind("change").change(function (e) {
-                var file = e.currentTarget.files[0];
-                lastSelectedFileName = file.name.replace(".json", "");
-                var reader = new FileReader();
-                reader.onload = function () {
-                    ParseAndApplySettings(reader.result);
-                };
-                reader.readAsText(file);
-                $("#uploadSettings").val("");
-            });
-            $("#uploadSettings").trigger("click");
-        }
-
-        function ParseAndApplySettings(result) {
-            var objInp = JSON.parse(result);
-
-            currentX = objInp.PX;
-            currentY = objInp.PY;
-
-            $("#numBox").val(objInp.Box);
-            $("#numCompX").val(objInp.X);
-            $("#numCompY").val(objInp.Y);
-            $("#numCompZ").val(objInp.Z);
-            $("#numColor").val(objInp.Color);
-            $("#chkHorizontal").prop("checked", objInp.R);
-            $("#chkShowGrid").prop("checked", objInp.G);
-
-            currentImg.onload = function () {
-                SaveImageBase(this);
-                ResetCanvas();
-            }
-            currentImg.src = objInp.Image;
-        }
-
-        function AddValueToField(field, value, convertFunc) {
-            var currVal = convertFunc($(field).val());
-            currVal += value;
-            $(field).val(currVal);
         }
 
         function ExecuteCommand(cmd) {
@@ -523,20 +173,103 @@
                     ExecuteMove(Keys.Right, false, rott);
                     ResetCanvas();
                     break;
+
                 case 12: //Configure Objects
                     ShowHideObjectPanel(false);
+                    break;
+
+                case 13: //Layers
+                    ShowHideLayerPanel(false);
+                    break;
+
+                default:
+                    alert("Not Implemented Yet.");
                     break;
             }
         }
 
-        function ShowHideObjectPanel(forceHide) {
-            showObjectPanel = forceHide ? false : !showObjectPanel;
-            $("#objectPanel").css("display", showObjectPanel ? "" : "none");
+        function RefreshLayerList(keepSelection = true) {
+            var lstLayers = $("#lstLayers")[0];
+            var currentSelection = lstLayers.selectedIndex;
+            lstLayers.length = 0;
+            layers.forEach((obj) => {
+                AddListItem(lstLayers, obj.name, obj.index);
+            });
+            if (keepSelection) {
+                lstLayers.selectedIndex = currentSelection;
+            } else {
+                lstLayers.selectedIndex = lstLayers.length - 1;
+            }
         }
 
-        function SetBoxValue(value) {
-            $("#numBox").val(value);
-            ResetCanvas();
+        var currentLayerEdit = null;
+        function AddLayer() {
+            LoadImage((file) => {
+                var newLayer = new ImageLayer();
+                newLayer.initialize(URL.createObjectURL(file), () => {
+                    newLayer.name = file.name;
+                    newLayer.index = $("#lstLayers").prop("length");
+                    layers.push(newLayer);
+                    RefreshLayerList(false);
+                    EditLayer(newLayer);
+                    ResetCanvas();
+                });
+            });
+        }
+
+        function EditLayer(layer) {
+            currentLayerEdit = layer;
+            $("#txtLayerName").val(layer.name);
+            $("#numLayerX").val(layer.x);
+            $("#numLayerY").val(layer.y);
+            $("#numLayerW").val(layer.w);
+            $("#numLayerH").val(layer.h);
+            $("#numLayerOp").val(layer.transp);
+            $("#chkShowLayer").prop("checked", layer.visible);
+            $("#numLayerRot").val("0");
+        }
+
+        function GetSelectedLayer() {
+            var lstLayers = $("#lstLayers")[0];
+            var currentSelection = lstLayers.selectedIndex;
+            return layers[currentSelection];
+        }
+
+        function CloneLayer() {
+            var layer = GetSelectedLayer();
+            if (!layer) return;
+            var clone = confirm("Really want to clone this layer?");
+            if (!clone) return;
+
+        }
+
+        function DeleteLayer() {
+            var layer = GetSelectedLayer();
+            if (!layer) return;
+            var del = confirm("Really want to delete this layer?");
+            if (!del) return;
+
+        }
+
+        function MoverLayerUp() {
+
+        }
+
+        function MoverLayerDown() {
+
+        }
+
+        function UpdateSelectedLayer() {
+            if (currentLayerEdit != null) {
+                currentLayerEdit.name = $("#txtLayerName").val();
+                currentLayerEdit.x = getInt("numLayerX");
+                currentLayerEdit.y = getInt("numLayerY");
+                currentLayerEdit.w = getInt("numLayerW");
+                currentLayerEdit.h = getInt("numLayerH");
+                currentLayerEdit.transp = getFloat("numLayerOp");
+                currentLayerEdit.visible = chkVal("chkShowLayer");
+                requestAnimationFrame(ResetCanvas);
+            }
         }
     </script>
 </head>
@@ -547,7 +280,7 @@
             <input type="file" id="uploadSettings" accept=".json" />
             <canvas id="saveCanvas"></canvas>
         </div>
-        <table style="width: 100%; margin-top: 4px;">
+        <table style="width: calc(100% - 10px); margin-top: 4px; ">
             <tr>
                 <td>
                     <div class="app-title">Deploy Games Simple Virtual TableTop</div>
@@ -557,7 +290,10 @@
                     <div class="input-group input-group-sm">
                         <div class="input-group-btn">
                             <a class="btn btn-default" onclick="LoadBackground()" title="Background">
-                                <i class="glyphicon glyphicon-picture"></i>&nbsp;Img
+                                <i class="glyphicon glyphicon-picture"></i>&nbsp;Background
+                            </a>
+                            <a class="btn btn-default" onclick="LoadParallax()" title="Parallax">
+                                <i class="glyphicon glyphicon-picture"></i>&nbsp;Parallax
                             </a>
                             <a class="btn btn-default" onclick="WriteSettings()" title="Save Settings">
                                 <i class="glyphicon glyphicon-save"></i>&nbsp;Save
@@ -577,16 +313,16 @@
     <div class="right-bar">
         <div class="btn-group btn-group-vertical">
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(8)">
-                <i class="glyphicon glyphicon-arrow-up"></i>
+                <i class="glyphicon glyp-adj glyphicon-arrow-up"></i>
             </a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(9)">
-                <i class="glyphicon glyphicon-arrow-down"></i>
+                <i class="glyphicon glyp-adj glyphicon-arrow-down"></i>
             </a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(10)">
-                <i class="glyphicon glyphicon-arrow-left"></i>
+                <i class="glyphicon glyp-adj glyphicon-arrow-left"></i>
             </a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(11)">
-                <i class="glyphicon glyphicon-arrow-right"></i>
+                <i class="glyphicon glyp-adj glyphicon-arrow-right"></i>
             </a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(0)">BX+</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(1)">BX-</a>
@@ -597,16 +333,123 @@
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(6)">CY+</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(7)">CY-</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(12)" title="Settings">
-                <i class="glyphicon glyphicon-cog"></i>
+                <i class="glyphicon glyp-adj glyphicon-cog"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(13)" title="Layers">
+                <i class="glyphicon glyp-adj glyphicon-list-alt"></i>
             </a>
         </div>
 
     </div>
 
+    <div class="object-panel layer-panel" id="layersPanel" style="display: none">
+        <table style="width: 100%;">
+            <tr>
+                <td><label class="lbl-header">Layers</label></td>
+            </tr>
+            <tr>
+                <td style="text-align: right">
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="AddLayer()" title="Add Layer">
+                                <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
+                            </a>
+                            <a class="btn btn-default" onclick="CloneLayer()" title="Clone Layer">
+                                <i class="glyphicon glyphicon-copy"></i>&nbsp;Clone
+                            </a>
+                            <a class="btn btn-default" onclick="DeleteLayer()" title="Delete Layer">
+                                <i class="glyphicon glyphicon-remove"></i>&nbsp;Rem
+                            </a>
+                            <a class="btn btn-default" onclick="MoverLayerUp()" title="Move Up">
+                                <i class="glyphicon glyphicon-triangle-top"></i>&nbsp;Up
+                            </a>
+                            <a class="btn btn-default" onclick="MoverLayerDown()" title="Move Down">
+                                <i class="glyphicon glyphicon-triangle-bottom"></i>&nbsp;Dwn
+                            </a>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <select multiple id="lstLayers" class="form-control input-sm"></select>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <table style="width: 100%;">
+                        <tr>
+                            <td colspan="3">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Name:</span>
+                                    <input type="text" class="form-control input-sm" id="txtLayerName" onblur="UpdateSelectedLayer()" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">X:</span>
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerX" value="0" onblur="UpdateSelectedLayer()" />
+                                </div>
+                            </td>
+                            <td style="width: 8px">&nbsp;</td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Y:</span>
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerY" value="0" onblur="UpdateSelectedLayer()" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Width:</span>
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerW" value="0" onblur="UpdateSelectedLayer()" />
+                                </div>
+                            </td>
+                            <td style="width: 8px">&nbsp;</td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Height:</span>
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerH" value="0" onblur="UpdateSelectedLayer()" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td style="width: 50%">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
+                                    <input type="number" class="form-control input-sm" min="0.01" max="1" step=".01" id="numLayerOp" value="1" onblur="UpdateSelectedLayer()" pattern="^\d*(\.\d{0,2})?$" />
+                                </div>
+                            </td>
+                            <td style="width: 8px">&nbsp;</td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Rotation:</span>
+                                    <input type="number" class="form-control input-sm" disabled="disabled" min="0.01" max="2" step=".01" id="numLayerRot" value="0" onchange="UpdateSelectedLayer()" pattern="^\d*(\.\d{0,2})?$" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="3">
+                                <div class="form-group form-group-sm" style="margin: 5px 0 5px 3px;">
+                                    <label for="chkShowLayer" class="rem-select" title="Show/Hide Layer">
+                                        <input type="checkbox" id="chkShowLayer" checked="checked" onclick="UpdateSelectedLayer()">&nbsp;Show Layer
+                                    </label><br />
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
     <div class="object-panel" id="objectPanel" style="display: none">
         <table style="width: 100%;">
             <tr>
-                <td><label>Settings</label></td>
+                <td><label class="lbl-header">Settings</label></td>
             </tr>
             <tr>
                 <td>
@@ -641,17 +484,47 @@
                         <span class="input-group-addon addon-60p" style="font-weight: bold">Zoom:</span>
                         <input type="number" class="form-control input-sm" min="0.01" max="2" step=".01" id="numCompZ" value="1" onchange="SetCanvasZoom()" pattern="^\d*(\.\d{0,2})?$" />
                     </div>
-                    <div class="input-group input-group-sm" title="Background Complement Y">
+                    <div class="input-group input-group-sm" title="Background Complement X">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
                         <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompX" value="0" onblur="ResetCanvas()" />
                     </div>
-                    <div class="input-group input-group-sm" title="Background Complement X">
+                    <div class="input-group input-group-sm" title="Background Complement Y">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
                         <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompY" value="0" onblur="ResetCanvas()" />
                     </div>
                     <div class="input-group input-group-sm" title="Grid Color">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">GC:</span>
                         <input type="color" class="form-control input-sm" id="numColor" value="#ff0000" oninput="ResetCanvas()" />
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td><label class="lbl-header" style="margin-top: 10px;">Parallax Settings</label></td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="form-group form-group-sm" style="margin-left: 3px; margin-bottom: 5px;">
+                        <label for="chkParallaxAnim" class="rem-select" title="Animate">
+                            <input type="checkbox" id="chkParallaxAnim" checked="checked" onclick="ResetCanvas()">&nbsp;Animate
+                        </label>
+                        <label for="chkParallaxRtl" class="rem-select" title="Right to Left">
+                            <input type="checkbox" id="chkParallaxRtl" checked="checked" onclick="ResetCanvas()">&nbsp;Right to Left
+                        </label>
+                        <label for="chkParallaxVertical" class="rem-select" title="Right to Left">
+                            <input type="checkbox" id="chkParallaxVertical" onclick="ResetCanvas()">&nbsp;Vertical
+                        </label>
+                    </div>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-60p" style="font-weight: bold">Speed:</span>
+                        <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numkParallaxSpeed" value="2" onchange="ResetCanvas()" />
+                    </div>
+                    <div class="input-group input-group-sm" title="Parallax Complement X">
+                        <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxX" value="0" onblur="ResetCanvas()" />
+                    </div>
+                    <div class="input-group input-group-sm" title="Parallax Complement Y">
+                        <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxY" value="0" onblur="ResetCanvas()" />
                     </div>
                 </td>
             </tr>
