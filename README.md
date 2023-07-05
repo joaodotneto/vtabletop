@@ -7,6 +7,11 @@ Simple Virtual TableTop Display - [Demo Here](https://stingray-app-bkd5f.ondigit
 - Box Sizes (With Defaults);
 - Save / Load Config Files (AKA Projects);
 
+Update (04/07/2023):
+- File Organization;
+- Layers (Above Background) implemented;
+- Animations - WIP;
+
 Update (02/07/2023):
 - Copy JS and CSS to separated file;
 - Parallax (One Layer below Background) implemented;

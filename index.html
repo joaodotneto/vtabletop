@@ -10,7 +10,8 @@
     <link rel="stylesheet" href="css/common.css?5" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?4"></script>
+    <script type="text/javascript" src="js/common.js?5"></script>
+    <script type="text/javascript" src="js/classes.js"></script>
     <style type="text/css">
         @media screen and (min-width: 1300px) {
             .app-title {
@@ -19,7 +20,7 @@
         }
 
         .layer-panel {
-            width: 315px;
+            width: 350px;
         }
 
         body {
@@ -44,6 +45,8 @@
             var rott = chkVal("chkHorizontal");
             var grid = chkVal("chkShowGrid");
             var cord = chkVal("chkShowCoords");
+            var slrs = chkVal("chkShowAllLayer");
+
             AMMOUNT = getInt("numBox");
 
             if (rott) {
@@ -83,14 +86,16 @@
             canvasCtx.fillRect(0, 0, size, size);
             */
 
+            if (slrs) {
+                layers.forEach((layer) => {
+                    layer.draw(canvasCtx);
+                });
+            }
+
             if (currentDarken > 0) {
                 canvasCtx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
                 canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
             }
-
-            layers.forEach((layer) => {
-                layer.draw();
-            });
 
             if (rott) {
                 canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
@@ -185,90 +190,6 @@
                 default:
                     alert("Not Implemented Yet.");
                     break;
-            }
-        }
-
-        function RefreshLayerList(keepSelection = true) {
-            var lstLayers = $("#lstLayers")[0];
-            var currentSelection = lstLayers.selectedIndex;
-            lstLayers.length = 0;
-            layers.forEach((obj) => {
-                AddListItem(lstLayers, obj.name, obj.index);
-            });
-            if (keepSelection) {
-                lstLayers.selectedIndex = currentSelection;
-            } else {
-                lstLayers.selectedIndex = lstLayers.length - 1;
-            }
-        }
-
-        var currentLayerEdit = null;
-        function AddLayer() {
-            LoadImage((file) => {
-                var newLayer = new ImageLayer();
-                newLayer.initialize(URL.createObjectURL(file), () => {
-                    newLayer.name = file.name;
-                    newLayer.index = $("#lstLayers").prop("length");
-                    layers.push(newLayer);
-                    RefreshLayerList(false);
-                    EditLayer(newLayer);
-                    ResetCanvas();
-                });
-            });
-        }
-
-        function EditLayer(layer) {
-            currentLayerEdit = layer;
-            $("#txtLayerName").val(layer.name);
-            $("#numLayerX").val(layer.x);
-            $("#numLayerY").val(layer.y);
-            $("#numLayerW").val(layer.w);
-            $("#numLayerH").val(layer.h);
-            $("#numLayerOp").val(layer.transp);
-            $("#chkShowLayer").prop("checked", layer.visible);
-            $("#numLayerRot").val("0");
-        }
-
-        function GetSelectedLayer() {
-            var lstLayers = $("#lstLayers")[0];
-            var currentSelection = lstLayers.selectedIndex;
-            return layers[currentSelection];
-        }
-
-        function CloneLayer() {
-            var layer = GetSelectedLayer();
-            if (!layer) return;
-            var clone = confirm("Really want to clone this layer?");
-            if (!clone) return;
-
-        }
-
-        function DeleteLayer() {
-            var layer = GetSelectedLayer();
-            if (!layer) return;
-            var del = confirm("Really want to delete this layer?");
-            if (!del) return;
-
-        }
-
-        function MoverLayerUp() {
-
-        }
-
-        function MoverLayerDown() {
-
-        }
-
-        function UpdateSelectedLayer() {
-            if (currentLayerEdit != null) {
-                currentLayerEdit.name = $("#txtLayerName").val();
-                currentLayerEdit.x = getInt("numLayerX");
-                currentLayerEdit.y = getInt("numLayerY");
-                currentLayerEdit.w = getInt("numLayerW");
-                currentLayerEdit.h = getInt("numLayerH");
-                currentLayerEdit.transp = getFloat("numLayerOp");
-                currentLayerEdit.visible = chkVal("chkShowLayer");
-                requestAnimationFrame(ResetCanvas);
             }
         }
     </script>
@@ -372,7 +293,7 @@
             </tr>
             <tr>
                 <td>
-                    <select multiple id="lstLayers" class="form-control input-sm"></select>
+                    <select multiple id="lstLayers" class="form-control input-sm" ondblclick="SelectCurrentLayer()"></select>
                 </td>
             </tr>
             <tr>
@@ -387,7 +308,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="width: 50%">
+                            <td style="width: 150px">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">X:</span>
                                     <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerX" value="0" onblur="UpdateSelectedLayer()" />
@@ -402,7 +323,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="width: 50%">
+                            <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Width:</span>
                                     <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerW" value="0" onblur="UpdateSelectedLayer()" />
@@ -417,7 +338,7 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="width: 50%">
+                            <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
                                     <input type="number" class="form-control input-sm" min="0.01" max="1" step=".01" id="numLayerOp" value="1" onblur="UpdateSelectedLayer()" pattern="^\d*(\.\d{0,2})?$" />
@@ -426,17 +347,30 @@
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Rotation:</span>
-                                    <input type="number" class="form-control input-sm" disabled="disabled" min="0.01" max="2" step=".01" id="numLayerRot" value="0" onchange="UpdateSelectedLayer()" pattern="^\d*(\.\d{0,2})?$" />
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Flip:</span>
+                                    <select class="form-control input-sm" id="lstFlipLayer" onchange="UpdateSelectedLayer()">
+                                        <option value="0">None</option>
+                                        <option value="1">Horizontal</option>
+                                        <option value="2">Vertical</option>
+                                        <option value="3">Both</option>
+                                    </select>
                                 </div>
                             </td>
                         </tr>
                         <tr>
-                            <td colspan="3">
+                            <td>
                                 <div class="form-group form-group-sm" style="margin: 5px 0 5px 3px;">
                                     <label for="chkShowLayer" class="rem-select" title="Show/Hide Layer">
                                         <input type="checkbox" id="chkShowLayer" checked="checked" onclick="UpdateSelectedLayer()">&nbsp;Show Layer
-                                    </label><br />
+                                    </label>
+                                </div>
+                            </td>
+                            <td style="width: 8px">&nbsp;</td>
+                            <td style="text-align: right">
+                                <div class="form-group form-group-sm" style="margin: 5px 0 5px 3px;">
+                                    <label for="chkShowAllLayer" class="rem-select" title="Show/Hide Layer">
+                                        <input type="checkbox" id="chkShowAllLayer" checked="checked" onclick="ResetCanvas()">&nbsp;Show All
+                                    </label>
                                 </div>
                             </td>
                         </tr>
@@ -482,7 +416,7 @@
                     </div>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">Zoom:</span>
-                        <input type="number" class="form-control input-sm" min="0.01" max="2" step=".01" id="numCompZ" value="1" onchange="SetCanvasZoom()" pattern="^\d*(\.\d{0,2})?$" />
+                        <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numCompZ" value="1" onchange="SetCanvasZoom()" pattern="^\d*(\.\d{0,2})?$" />
                     </div>
                     <div class="input-group input-group-sm" title="Background Complement X">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>

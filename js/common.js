@@ -27,6 +27,8 @@ var SCROLL_SENSITIVITY = 0.0005;
 var lastValueZoom = 1.0;
 var cameraZoom = 1.0;
 var layers = [];
+var currentLayerEdit = null;
+
 //Escurecimento da tela
 var currentDarken = 0;
 
@@ -185,7 +187,6 @@ function getInt(name) {
 
 function getFloat(name, def) {
     var value = parseFloat($(`#${name}`).val());
-    console.log(value);
     if (isNaN(value)) return (def ?? 0.0);
     return value ?? (def ?? 0.0);
 }
@@ -269,7 +270,7 @@ function ConfigureCanvas() {
             //ResetCanvas();
         }
     });
-
+    /*
     canvasObj.addEventListener('wheel', (e) => {
         if (!shftKey) return;
         var newVal = e.deltaY * SCROLL_SENSITIVITY;
@@ -331,6 +332,7 @@ function ConfigureCanvas() {
             e.preventDefault();
         }
     });
+    */
 }
 
 function ExecuteMove(keyCode, shftKey, rott) {
@@ -384,7 +386,17 @@ function ResetAdjusts() {
     ResetCanvas();
 }
 
+function CloneClassInstance(model, instance) {
+    return Object.assign(Object.create(Object.getPrototypeOf(model)), instance);
+}
+
 function WriteSettings() {
+    var parsedLayers = [];
+    layers.forEach((obj) => {
+        var parsedLayer = CloneClassInstance(obj, obj);
+        parsedLayer.img = GetImageAsBase64(parsedLayer.img);
+        parsedLayers.push(parsedLayer);
+    });
     var objOut = {
         Box: getInt("numBox"),
         X: getInt("numCompX"),
@@ -397,6 +409,7 @@ function WriteSettings() {
         PY: currentY,
         Color: $("#numColor").val(),
         Image: GetImageAsBase64(currentImg),
+        Layers: JSON.stringify(parsedLayers),
         Parallax: {
             Anim: chkVal("chkParallaxAnim"),
             Dir: chkVal("chkParallaxRtl"),
@@ -467,6 +480,19 @@ function ParseAndApplySettings(result) {
             parallaxBack.initialize(objP.Image);
         }
     }
+    
+    if (objInp.Layers) {
+        var lstLayers = JSON.parse(objInp.Layers);
+        layers = [];
+        var model = new ImageLayer();
+        lstLayers.forEach((obj) => {
+            var nLayer = CloneClassInstance(model, obj);
+            nLayer.loadImage(nLayer.img);
+            layers.push(nLayer);
+        });
+        RefreshLayerList(false);
+    }
+
     currentImg.onload = function () {
         ResetCanvas();
     }
@@ -479,7 +505,7 @@ function DrawScroll() {
     var deltaSeconds = (now - lastFrameTime) / parseInt(parallaxSpeed * 100);
     lastFrameTime = now;
     if (!isFinite(deltaSeconds) || isNaN(deltaSeconds)) deltaSeconds = 0;
-    if (parallaxBack) parallaxBack.draw(deltaSeconds);
+    if (parallaxBack) parallaxBack.draw(canvasCtx, deltaSeconds);
 }
 
 var bootstrapFloatAlert = function () {
@@ -550,90 +576,146 @@ var bootstrapFloatAlert = function () {
 */
 var BootstrapFloatAlert = new bootstrapFloatAlert();
 
-
-class ImageLayer {
-    constructor() {
-        this.name = "";
-        this.index = 0;
-        this.x = 0;
-        this.y = 0;
-        this.w = 0;
-        this.h = 0;
-        this.transp = 1.0;
-        this.angle = 0;
-        this.visible = true;
-        this.img = new Image();
-    }
-    initialize(imgSrc, callback) {
-        this.img.src = imgSrc;
-        this.img.onload = () => {
-            this.w = this.img.naturalWidth;
-            this.h = this.img.naturalHeight;
-            if (callback) callback();
-        };
-    }
-    draw() {
-        if (!this.visible) return;
-        canvasCtx.save();
-        canvasCtx.globalAlpha = this.transp;
-        //TODO: Rotate
-        canvasCtx.drawImage(this.img, this.x, this.y, this.w, this.h);
-        canvasCtx.restore();
+function RefreshLayerList(keepSelection = true) {
+    var lstLayers = $("#lstLayers")[0];
+    var currentSelection = lstLayers.selectedIndex;
+    lstLayers.length = 0;
+    layers.forEach((obj) => {
+        AddListItem(lstLayers, obj.name, obj.index);
+    });
+    if (keepSelection) {
+        lstLayers.selectedIndex = currentSelection;
+    } else {
+        lstLayers.selectedIndex = lstLayers.length - 1;
     }
 }
 
-class ParallaxBackground {
-    //TODO: Trazer os parametros para dentro (passados no draw, por exemplo)
-    constructor() {
-        this.totalSeconds = 0;
-        this.speed = 20;
-        this.img = new Image();
-        this.slideImages = 1;
+function AddLayer() {
+    LoadImage((file) => {
+        var newLayer = new ImageLayer();
+        newLayer.initialize(URL.createObjectURL(file), () => {
+            newLayer.name = file.name;
+            newLayer.index = $("#lstLayers").prop("length");
+            layers.push(newLayer);
+            RefreshLayerList(false);
+            EditLayer(newLayer);
+            ResetCanvas();
+        });
+    });
+}
+
+function SelectCurrentLayer() {
+    var layer = GetSelectedLayer();
+    EditLayer(layer);
+}
+
+function EditLayer(layer) {
+    currentLayerEdit = layer;
+    $("#txtLayerName").val(layer.name);
+    $("#numLayerX").val(layer.x);
+    $("#numLayerY").val(layer.y);
+    $("#numLayerW").val(layer.w);
+    $("#numLayerH").val(layer.h);
+    $("#numLayerOp").val(layer.transp);
+    $("#chkShowLayer").prop("checked", layer.visible);
+    $("#numLayerRot").val("0");
+}
+
+function ClearEditLayer() {
+    currentLayerEdit = null;
+    $("#txtLayerName").val("");
+    $("#numLayerX").val("0");
+    $("#numLayerY").val("0");
+    $("#numLayerW").val("0");
+    $("#numLayerH").val("0");
+    $("#numLayerOp").val("1");
+    $("#chkShowLayer").prop("checked", true);
+    $("#numLayerRot").val("0");
+}
+
+function UpdateLayerIndex() {
+    layers.forEach((obj, idx) => {
+        obj.index = idx;
+    });
+}
+
+function GetSelectedLayer() {
+    var lstLayers = $("#lstLayers")[0];
+    var currentSelection = lstLayers.selectedIndex;
+    return layers[currentSelection];
+}
+
+function CloneLayer() {
+    var layer = GetSelectedLayer();
+    if (!layer) return;
+    var clone = confirm("Really want to clone this layer?");
+    if (!clone) return;
+    var newLayer = CloneClassInstance(layer, layer);
+    newLayer.name = "Clone - " + newLayer.name;
+    layers.push(newLayer);
+    UpdateLayerIndex();
+    RefreshLayerList(false);
+    EditLayer(newLayer);
+}
+
+function DeleteLayer() {
+    var layer = GetSelectedLayer();
+    if (!layer) return;
+    var del = confirm("Really want to delete this layer?");
+    if (!del) return;
+    layers.splice(layer.index, 1);
+    var lstLayers = $("#lstLayers")[0];
+    var opt = lstLayers.options[layer.index];
+    lstLayers.removeChild(opt);
+    ClearEditLayer();
+}
+
+function MoverLayerUp() {
+    var lstLayers = $("#lstLayers")[0];
+    var idx = lstLayers.selectedIndex;
+    if (idx > 0) {
+        var nxt = idx - 1;
+        var opt = lstLayers.options[idx];
+        var opB = lstLayers.options[nxt];
+        [layers[idx], layers[nxt]] = [layers[nxt], layers[idx]];
+        UpdateLayerIndex();
+        lstLayers.removeChild(opt);
+        lstLayers.insertBefore(opt, opB);
     }
-    initialize(imgSrc, callback) {
-        this.img.src = imgSrc;
-        this.img.onload = () => {
-            this.slideImages = Math.ceil(canvasObj.width / this.img.width) + 1;
-            this.draw(0);
-            if (callback) callback();
-        };
-    }
-    draw(delta) {
-        //TODO: Deve-se poder configurar o Parallax para vertical também
-        this.totalSeconds += delta;
-        var new_pos = (this.totalSeconds * this.speed % this.img.width);
-        canvasCtx.save();
+    requestAnimationFrame(ResetCanvas);
+}
 
-        //Posicionar o parallax na vertical
-        //var transX = canvasObj.height - this.img.height;
-
-        //Direção
-        var fromRightToLeft = -new_pos;
-        var fromLeftToRight = (new_pos - this.img.width);
-        var directionX = parallaxDirection ? fromRightToLeft : fromLeftToRight;
-
-        var fromTopToBottom = -new_pos;
-        var fromBottomToTop = (new_pos - this.img.height);
-        var directionY = parallaxDirection ? fromTopToBottom : fromBottomToTop;
-
-        if (parallaxVertical) {
-            canvasCtx.translate(0, directionY);
+function MoverLayerDown() {
+    var lstLayers = $("#lstLayers")[0];
+    var idx = lstLayers.selectedIndex;
+    var tot = (lstLayers.length - 1);
+    if (idx < tot) {
+        var opt = lstLayers.options[idx];
+        var nxt = 0;
+        if ((idx + 1) == tot) {
+            nxt = tot;
+            lstLayers.appendChild(opt);
         } else {
-            canvasCtx.translate(directionX, 0);
+            nxt = idx + 2;
+            var opB = lstLayers.options[idx + 2];
+            lstLayers.insertBefore(opt, opB);
         }
+        [layers[idx], layers[nxt]] = [layers[nxt], layers[idx]];
+        UpdateLayerIndex();
+    }
+    requestAnimationFrame(ResetCanvas);
+}
 
-        for (var i = 0; i < this.slideImages; i++) {
-            if (parallaxVertical) {
-                canvasCtx.drawImage(this.img, parallaxX, (i * this.img.height) + parallaxY);
-            } else {
-                canvasCtx.drawImage(this.img, (i * this.img.width) + parallaxX, parallaxY);
-            }
-        }
-        /*
-        //Escurecer o Parallax
-        canvasCtx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
-        canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
-        */
-        canvasCtx.restore();
+function UpdateSelectedLayer() {
+    if (currentLayerEdit != null) {
+        currentLayerEdit.name = $("#txtLayerName").val();
+        currentLayerEdit.x = getInt("numLayerX");
+        currentLayerEdit.y = getInt("numLayerY");
+        currentLayerEdit.w = getInt("numLayerW");
+        currentLayerEdit.h = getInt("numLayerH");
+        currentLayerEdit.transp = getFloat("numLayerOp");
+        currentLayerEdit.visible = chkVal("chkShowLayer");
+        currentLayerEdit.flipType = getInt("lstFlipLayer");
+        requestAnimationFrame(ResetCanvas);
     }
 }
