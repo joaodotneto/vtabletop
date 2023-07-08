@@ -28,6 +28,7 @@ var lastValueZoom = 1.0;
 var cameraZoom = 1.0;
 var layers = [];
 var currentLayerEdit = null;
+var currentSelectedRevealItem = null;
 
 //Escurecimento da tela
 var currentDarken = 0;
@@ -42,7 +43,12 @@ var lastMouseY = 0;
 var lastSelectedFileName = "Map";
 var showObjectPanel = false;
 var showLayerPanel = false;
+var showMapRevealPanel = false;
 var settingsWindow = null;
+
+var createMapRevealEnabled = false;
+var currentRevealList = [];
+var currentRevealSteps = [];
 
 const OpenFile = async () => {
     try {
@@ -89,14 +95,29 @@ function ShowSettingsWindow() {
 
 function ShowHideLayerPanel(forceHide) {
     showLayerPanel = forceHide ? false : !showLayerPanel;
-    if (showLayerPanel) ShowHideObjectPanel(true);
+    if (showLayerPanel) {
+        ShowHideObjectPanel(true);
+        ShowHideMapRevealPanel(true);
+    }
     $("#layersPanel").css("display", showLayerPanel ? "" : "none");
 }
 
 function ShowHideObjectPanel(forceHide) {
     showObjectPanel = forceHide ? false : !showObjectPanel;
-    if (showObjectPanel) ShowHideLayerPanel(true);
+    if (showObjectPanel) {
+        ShowHideLayerPanel(true);
+        ShowHideMapRevealPanel(true);
+    }
     $("#objectPanel").css("display", showObjectPanel ? "" : "none");
+}
+
+function ShowHideMapRevealPanel(forceHide) {
+    showMapRevealPanel = forceHide ? false : !showMapRevealPanel;
+    if (showMapRevealPanel) {
+        ShowHideObjectPanel(true);
+        ShowHideLayerPanel(true);
+    }
+    $("#mapRevealPanel").css("display", showMapRevealPanel ? "" : "none");
 }
 
 function AddValueToField(field, value, convertFunc) {
@@ -117,6 +138,28 @@ function hexToRgb(hex) {
         g: parseInt(result[2], 16),
         b: parseInt(result[3], 16)
     } : null;
+}
+
+function invertColor(hex) {
+    if (hex.indexOf('#') === 0) {
+        hex = hex.slice(1);
+    }
+    if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    if (hex.length !== 6) {
+        throw new Error('Invalid HEX color.');
+    }
+    var r = (255 - parseInt(hex.slice(0, 2), 16)).toString(16),
+        g = (255 - parseInt(hex.slice(2, 4), 16)).toString(16),
+        b = (255 - parseInt(hex.slice(4, 6), 16)).toString(16);
+    return '#' + padZero(r) + padZero(g) + padZero(b);
+}
+
+function padZero(str, len) {
+    len = len || 2;
+    var zeros = new Array(len).join('0');
+    return (zeros + str).slice(-len);
 }
 
 function HasSaveFilePicker() {
@@ -146,7 +189,6 @@ function DrawLine(x1, y1, x2, y2) {
 }
 
 function DrawCoordsFull(stepsV, stepsH) {
-    //####################################
     canvasCtx.save();
     canvasCtx.font = "bold 18px Arial";
     canvasCtx.fillStyle = "#ffffff";
@@ -156,15 +198,6 @@ function DrawCoordsFull(stepsV, stepsH) {
         }
     }
     canvasCtx.restore();
-    //canvasCtx.translate(0, 0);
-    //canvasCtx.rotate(Math.PI / 2);
-    //for (var i = 0; i < stepsV; i++) {
-    //    for (var j = 0; j < stepsH; j++) {
-    //        DrawCoordsVert(j, i);
-    //    }
-    //}
-
-    //####################################
 }
 
 function DrawCoordsVert(x, y) {
@@ -250,10 +283,12 @@ function ConfigureCanvas() {
 
     canvasObj.addEventListener("mouseup", (e) => {
         //TODO: Se houver ações de colocação ou retirada, devem vir aqui
-        if (false) {
-
+        if (createMapRevealEnabled) {
+            AddMapRevealStep(e);
         } else {
             //ShowHideObjectPanel(true);
+            //ShowHideLayerPanel(true);
+            //ShowHideMapRevealPanel(true);
         }
     });
 
@@ -263,11 +298,12 @@ function ConfigureCanvas() {
         var mr = new DOMPoint(e.clientX, e.clientY, 0, 0);
         var mx = parseInt((mr.x - cr.left) / AMMOUNT);
         var my = parseInt((mr.y - cr.top) / AMMOUNT);
-
         if (lastMouseX != mx || lastMouseY != my) {
             lastMouseX = mx;
             lastMouseY = my;
-            //ResetCanvas();
+            var posX = (currentX / AMMOUNT);
+            var posY = (currentY / AMMOUNT);
+            console.log(`${lastMouseX} - ${lastMouseY} / ${(posX + lastMouseX)} - ${(posY + lastMouseY)}`);
         }
     });
     /*
@@ -280,6 +316,7 @@ function ConfigureCanvas() {
         numCompZ.val(curVal);
         SetCanvasZoom();
     });
+    */
 
     $('html').keydown(function (e) {
         var keyCode = e.which ?? e.keyCode;
@@ -289,7 +326,7 @@ function ConfigureCanvas() {
         var cmpY = false;
 
         var rott = $("#chkHorizontal").prop("checked");
-        var isMoveKey = ExecuteMove(keyCode, shftKey, rott);
+        var isMoveKey = ExecuteMove(keyCode, shftKey, ctrlKey, rott);
 
         switch (keyCode) {
             case Keys.Down:
@@ -303,7 +340,7 @@ function ConfigureCanvas() {
                 break;
         }
 
-        if (isMoveKey) {
+        if (isMoveKey && ctrlKey) {
             var numCompX = $("#numCompX");
             var numCompY = $("#numCompY");
             var valX = parseInt(numCompX.val());
@@ -332,12 +369,12 @@ function ConfigureCanvas() {
             e.preventDefault();
         }
     });
-    */
 }
 
-function ExecuteMove(keyCode, shftKey, rott) {
+function ExecuteMove(keyCode, shftKey, ctrlKey, rott) {
+    if (!ctrlKey) return false;
     AMMOUNT = parseInt($("#numBox").val());
-    var ammount = ctrlKey ? (AMMOUNT / 2) : AMMOUNT;
+    var ammount = AMMOUNT; // ctrlKey ? (AMMOUNT / 2) : AMMOUNT;
 
     switch (keyCode) {
         case Keys.Down:
@@ -408,8 +445,11 @@ function WriteSettings() {
         PX: currentX,
         PY: currentY,
         Color: $("#numColor").val(),
+        BackColor: $("#numColorBk").val(),
         Image: GetImageAsBase64(currentImg),
         Layers: JSON.stringify(parsedLayers),
+        RevealColor: $("#numColorMapReveal").val(),
+        Reveals: JSON.stringify(currentRevealList),
         Parallax: {
             Anim: chkVal("chkParallaxAnim"),
             Dir: chkVal("chkParallaxRtl"),
@@ -455,6 +495,7 @@ function ReadSettings() {
 
 function ParseAndApplySettings(result) {
     var objInp = JSON.parse(result);
+
     currentX = objInp.PX;
     currentY = objInp.PY;
 
@@ -463,6 +504,8 @@ function ParseAndApplySettings(result) {
     $("#numCompY").val(objInp.Y);
     $("#numCompZ").val(objInp.Z);
     $("#numColor").val(objInp.Color);
+    $("#numColorBk").val(objInp.BackColor ?? "#000000");
+    $("#numColorMapReveal").val(objInp.RevealColor ?? "#ffffff"),
     $("#chkHorizontal").prop("checked", objInp.R);
     $("#chkShowGrid").prop("checked", objInp.G);
     $("#chkShowCoords").prop("checked", (objInp.Coords ?? false));
@@ -480,7 +523,7 @@ function ParseAndApplySettings(result) {
             parallaxBack.initialize(objP.Image);
         }
     }
-    
+
     if (objInp.Layers) {
         var lstLayers = JSON.parse(objInp.Layers);
         layers = [];
@@ -493,6 +536,17 @@ function ParseAndApplySettings(result) {
         RefreshLayerList(false);
     }
 
+    if (objInp.Reveals) {
+        var lstReveals = JSON.parse(objInp.Reveals);
+        currentRevealList = [];
+        var model = new MapReveal();
+        lstReveals.forEach((obj) => {
+            var nLayer = CloneClassInstance(model, obj);
+            currentRevealList.push(nLayer);
+        });
+        RefreshMapRevealList(false);
+    }
+
     currentImg.onload = function () {
         ResetCanvas();
     }
@@ -500,81 +554,13 @@ function ParseAndApplySettings(result) {
 }
 
 function DrawScroll() {
-    if (showAnimation) requestAnimationFrame(ResetCanvas);
+    if (!showAnimation) return;
     var now = Date.now();
     var deltaSeconds = (now - lastFrameTime) / parseInt(parallaxSpeed * 100);
     lastFrameTime = now;
     if (!isFinite(deltaSeconds) || isNaN(deltaSeconds)) deltaSeconds = 0;
     if (parallaxBack) parallaxBack.draw(canvasCtx, deltaSeconds);
 }
-
-var bootstrapFloatAlert = function () {
-    var self = this;
-    this.baseTimeout = 2000;
-    this.baseMessage = function (message, alert, parent) {
-        $('<div id="bootstrapFloatAlert" class="alert alert-' + alert +
-            ' fade in"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button><b>' +
-            message + '&nbsp;&nbsp;</b></div>').appendTo((parent ? parent : 'body'));
-        setTimeout(function () {
-            $(".alert").alert('close');
-        }, self.baseTimeout);
-    }
-    /**
-    * Exibe um alerta flutuante de cor amarela (warning bootstrap) no canto superior direito do parent informado.
-    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
-    * @memberof BootstrapFloatAlert
-    * @public
-    * @example
-    * BootstrapFloatAlert.warning("Ocorreu um Erro!");
-    * BootstrapFloatAlert.warning("Ocorreu um Erro!", "divPainelExemplo");
-    */
-    this.warning = function (message, parent) {
-        self.baseMessage(message, 'warning', parent);
-    }
-    /**
-    * Exibe um alerta flutuante de cor verde (success bootstrap) no canto superior direito do parent informado.
-    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
-    * @memberof BootstrapFloatAlert
-    * @public
-    * @example
-    * BootstrapFloatAlert.success("Dado persistido corretamente!");
-    * BootstrapFloatAlert.success("Dado persistido corretamente!", "divPainelExemplo");
-    */
-    this.success = function (message, parent) {
-        self.baseMessage(message, 'success', parent);
-    }
-    /**
-    * Exibe um alerta flutuante de cor azul (info bootstrap) no canto superior direito do parent informado.
-    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
-    * @memberof BootstrapFloatAlert
-    * @public
-    * @example
-    * BootstrapFloatAlert.info("Dado persistido corretamente!");
-    * BootstrapFloatAlert.info("Dado persistido corretamente!", "divPainelExemplo");
-    */
-    this.info = function (message, parent) {
-        self.baseMessage(message, 'info', parent);
-    }
-    /**
-    * Exibe um alerta flutuante de cor vermelha (danger bootstrap) no canto superior direito do parent informado.
-    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
-    * @memberof BootstrapFloatAlert
-    * @public
-    * @example
-    * BootstrapFloatAlert.danger("Ocorreu um Erro!");
-    * BootstrapFloatAlert.danger("Ocorreu um Erro!", "divPainelExemplo");
-    */
-    this.danger = function (message, parent) {
-        self.baseMessage(message, 'danger', parent);
-    }
-}
-/**
-* Funcionalidade estática para Exibição de alertas flutuantes.
-* @public
-* @class BootstrapFloatAlert
-* @static
-*/
-var BootstrapFloatAlert = new bootstrapFloatAlert();
 
 function RefreshLayerList(keepSelection = true) {
     var lstLayers = $("#lstLayers")[0];
@@ -618,7 +604,9 @@ function EditLayer(layer) {
     $("#numLayerH").val(layer.h);
     $("#numLayerOp").val(layer.transp);
     $("#chkShowLayer").prop("checked", layer.visible);
-    $("#numLayerRot").val("0");
+    $("#chkShowLayerOverlay").prop("checked", layer.showOverlay);
+    $("#numColorLayerOverlay").val(layer.overlayColor);
+    $("#numLayerOverlayOp").val(layer.overlayOpacity);
 }
 
 function ClearEditLayer() {
@@ -630,7 +618,9 @@ function ClearEditLayer() {
     $("#numLayerH").val("0");
     $("#numLayerOp").val("1");
     $("#chkShowLayer").prop("checked", true);
-    $("#numLayerRot").val("0");
+    $("#chkShowLayerOverlay").prop("checked", false);
+    $("#numColorLayerOverlay").val("#000000");
+    $("#numLayerOverlayOp").val("1");
 }
 
 function UpdateLayerIndex() {
@@ -716,6 +706,132 @@ function UpdateSelectedLayer() {
         currentLayerEdit.transp = getFloat("numLayerOp");
         currentLayerEdit.visible = chkVal("chkShowLayer");
         currentLayerEdit.flipType = getInt("lstFlipLayer");
-        requestAnimationFrame(ResetCanvas);
+        currentLayerEdit.showOverlay = chkVal("chkShowLayerOverlay");
+        currentLayerEdit.overlayOpacity = getFloat("numLayerOverlayOp");
+        currentLayerEdit.overlayColor = $("#numColorLayerOverlay").val();
     }
+}
+
+function AddRevealItem() {
+    CreateRevealItemAlert();
+    createMapRevealEnabled = true;
+    currentRevealSteps = [];
+}
+
+function AddMapRevealStep(e) {
+    AMMOUNT = parseInt($("#numBox").val());
+    var cr = canvasObj.getBoundingClientRect();
+    var mr = new DOMPoint(e.clientX, e.clientY, 0, 0);
+    var mx = parseInt((mr.x - cr.left) / AMMOUNT);
+    var my = parseInt((mr.y - cr.top) / AMMOUNT);
+    var pX = (currentX / AMMOUNT) * -1;
+    var pY = (currentY / AMMOUNT) * -1;
+    var idx = currentRevealSteps.findIndex((a) => { return a.x == mx && a.y == my });
+    if (idx > -1) {
+        currentRevealSteps.splice(idx, 1);
+    } else {
+        currentRevealSteps.push({ x: mx, y: my, rx: (pX + mx), ry: (pY + my) });
+    }
+}
+
+function FinishAddMapRevealStep(event) {
+    var revealName = "Reveal";
+    var keepSelected = false;
+    if (currentSelectedRevealItem) {
+        revealName = currentSelectedRevealItem.name;
+        keepSelected = true;
+    }
+    var mapRevealName = prompt("Give this map reveal a Name:", revealName);
+    if (!mapRevealName) return;
+
+    $("#alertMapRevealCreate").alert('close');
+    createMapRevealEnabled = false;
+    if (currentSelectedRevealItem) {
+        currentSelectedRevealItem.name = mapRevealName;
+        currentSelectedRevealItem.steps = [...currentRevealSteps];
+        currentSelectedRevealItem = null;
+    } else {
+        var newReveal = new MapReveal();
+        newReveal.name = mapRevealName;
+        newReveal.steps = [...currentRevealSteps];
+        currentRevealList.push(newReveal);
+    }
+    currentRevealSteps = [];
+    RefreshMapRevealList(keepSelected);
+    event.stopPropagation();
+}
+
+function RefreshMapRevealList(keepSelection = true) {
+    var lstReveal = $("#lstMapReveals")[0];
+    var currentSelection = lstReveal.selectedIndex;
+    lstReveal.length = 0;
+    currentRevealList.forEach((obj) => {
+        AddListItem(lstReveal, obj.Name, obj.name);
+    });
+    if (keepSelection) {
+        lstReveal.selectedIndex = currentSelection;
+    } else {
+        lstReveal.selectedIndex = lstReveal.length - 1;
+    }
+}
+
+function GetSelectedMapReveal() {
+    var lstReveal = $("#lstMapReveals")[0];
+    var currentSelection = lstReveal.selectedIndex;
+    currentSelectedRevealItem = currentRevealList[currentSelection];
+    currentSelectedRevealItem.index = currentSelection;
+    return currentSelectedRevealItem;
+}
+
+function ChangeCurrentMapReveal() {
+    var currentReveal = GetSelectedMapReveal();
+    currentReveal.visible = !currentReveal.visible;
+    RefreshMapRevealList(true);
+}
+
+function MoveRevealItem(idx) {
+    var currentReveal = GetSelectedMapReveal();
+    if (!currentReveal) return;
+    var mvx = (idx == 2 ? -1 : (idx == 3 ? 1 : 0));
+    var mvy = (idx == 0 ? -1 : (idx == 1 ? 1 : 0));
+    currentReveal.updateSteps(mvx, mvy);
+}
+
+function CloneRevealItem() {
+    var currentReveal = GetSelectedMapReveal();
+    if (!currentReveal) return;
+    var clone = confirm("Really want to clone this Reveal Item?");
+    if (!clone) return;
+    var newItem = CloneClassInstance(currentReveal, currentReveal);
+    newItem.name = "Clone - " + currentReveal.name;
+    currentRevealList.push(newItem);
+    RefreshMapRevealList(false);
+}
+
+function EditRevealItem() {
+    var currentReveal = GetSelectedMapReveal();
+    if (!currentReveal) return;
+    CreateRevealItemAlert();
+    createMapRevealEnabled = true;
+    currentRevealSteps = [...currentReveal.steps];
+}
+
+function DeleteRevealItem() {
+    var currentReveal = GetSelectedMapReveal();
+    if (!currentReveal) return;
+    var del = confirm("Really want to delete this Reveal Item?");
+    if (!del) return;
+    currentRevealList.splice(currentReveal.index, 1);
+    var lstReveal = $("#lstMapReveals")[0];
+    var opt = lstReveal.options[currentReveal.index];
+    lstReveal.removeChild(opt);
+    currentSelectedRevealItem = null;
+}
+
+function CreateRevealItemAlert() {
+    var alert = `<div class="alert alert-warning alert-map-reveal" id="alertMapRevealCreate" role="alert" onclick="FinishAddMapRevealStep(event)">
+                <b>Click over the locals of the map that compose the reveal.</b><br />
+                <b>Click HERE to complete.</b><br />
+            </div>`;
+    $(alert).appendTo('body');
 }

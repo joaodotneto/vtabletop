@@ -7,11 +7,11 @@
     <meta http-equiv="pragma" content="no-cache" />
 
     <link rel="stylesheet" href="css/bootstrap.min.css?1" />
-    <link rel="stylesheet" href="css/common.css?5" />
+    <link rel="stylesheet" href="css/common.css?1" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?5"></script>
-    <script type="text/javascript" src="js/classes.js"></script>
+    <script type="text/javascript" src="js/common.js?1"></script>
+    <script type="text/javascript" src="js/classes.js?1"></script>
     <style type="text/css">
         @media screen and (min-width: 1300px) {
             .app-title {
@@ -19,8 +19,31 @@
             }
         }
 
-        .layer-panel {
-            width: 350px;
+        .btn-sm-adj {
+            height: 34px;
+        }
+
+        .mc-toggle-switch {
+            width: 170px;
+        }
+
+        .mc-ts-check:checked + .mc-ts-slider:before {
+            -webkit-transform: translateX(136px);
+            -ms-transform: translateX(136px);
+            transform: translateX(136px);
+        }
+
+        .layer-panel, .map-reveal-panel {
+            width: 370px;
+        }
+
+        .alert-map-reveal {
+            position: absolute;
+            z-index: 1000;
+            top: 42px;
+            right: 440px;
+            user-select: none;
+            cursor: pointer;
         }
 
         body {
@@ -31,14 +54,31 @@
     </style>
     <script type="text/javascript">
         $(document).ready(() => {
+            $("input[type=number]").blur(function () {
+                var self = $(this);
+                val = parseFloat(self.val());
+                min = parseFloat(self.attr("min"));
+                max = parseFloat(self.attr("max"));
+                if (val > max) {
+                    self.val(max);
+                } else if (val < min) {
+                    self.val(min);
+                }
+                try {
+                    eval(self.attr("lazyblur"));
+                } catch (e) {
+                    console.log(e);
+                }
+            });
             ConfigureCanvas();
+            ResetCanvas();
         });
 
         function ResetCanvas() {
+            requestAnimationFrame(ResetCanvas);
+
             canvasObj.width = window.innerWidth;
             canvasObj.height = window.innerHeight;
-
-            canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
 
             var cmpX = getInt("numCompX");
             var cmpY = getInt("numCompY");
@@ -46,8 +86,18 @@
             var grid = chkVal("chkShowGrid");
             var cord = chkVal("chkShowCoords");
             var slrs = chkVal("chkShowAllLayer");
+            var back = $("#numColorBk").val();
+
+            currentDarken = getFloat("numGlobalShow");
+
+            //Cor de fundo
+            canvasCtx.fillStyle = back;
+            canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
 
             AMMOUNT = getInt("numBox");
+            var ammountWZ = AMMOUNT * cameraZoom;
+            var currX = currentX + cmpX;
+            var currY = currentY + cmpY;
 
             if (rott) {
                 var centerX = (currentImg.width) / 2;
@@ -67,7 +117,7 @@
 
             DrawScroll();
 
-            canvasCtx.drawImage(currentImg, currentX + cmpX, currentY + cmpY,
+            canvasCtx.drawImage(currentImg, currX, currY,
                 currentImg.width * cameraZoom,
                 currentImg.height * cameraZoom);
 
@@ -92,18 +142,35 @@
                 });
             }
 
-            if (currentDarken > 0) {
-                canvasCtx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
-                canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
-            }
-
             if (rott) {
                 canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
             }
 
+            if (createMapRevealEnabled) {
+                var cc = hexToRgb($("#numColor").val());
+                canvasCtx.fillStyle = `rgba(${cc.r}, ${cc.g}, ${cc.b}, 0.5)`;
+                canvasCtx.fillRect((lastMouseX * AMMOUNT), (lastMouseY * AMMOUNT), AMMOUNT, AMMOUNT);
+
+                canvasCtx.save();
+                canvasCtx.fillStyle = $("#numColorMapReveal").val();
+                currentRevealSteps.forEach((obj) => {
+                    canvasCtx.fillRect(currX + (obj.rx * ammountWZ), currY + (obj.ry * ammountWZ), ammountWZ, ammountWZ);
+                });
+                canvasCtx.restore();
+            }
+
+            RenderRevealList(currX, currY, ammountWZ);
+
+            if (currentDarken > 0) {
+                canvasCtx.save();
+                canvasCtx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
+                canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
+                canvasCtx.restore();
+            }
+
             var stepsV = (window.innerWidth / AMMOUNT) + 1;
             var stepsH = (window.innerHeight / AMMOUNT) + 1;
-
+            canvasCtx.save();
             if (grid) {
                 for (var i = 0; i < stepsV; i++) {
                     if (i > 0) {
@@ -119,11 +186,38 @@
                 }
             }
             if (cord) DrawCoordsFull(stepsV, stepsH);
-            /*
-            var cc = hexToRgb($("#numColor").val());
-            canvasCtx.fillStyle = `rgba(${cc.r}, ${cc.g}, ${cc.b}, 0.5)`;
-            canvasCtx.fillRect((lastMouseX * AMMOUNT), (lastMouseY * AMMOUNT), AMMOUNT, AMMOUNT);
-            */
+            canvasCtx.restore();
+        }
+
+        function RenderRevealList(currX, currY, ammountWZ) {
+            var showAll = chkVal("chkShowAllMapReveal");
+            if (!showAll) return;
+            if (currentRevealList.length > 0) {
+                canvasCtx.save();
+                var stepColor = $("#numColorMapReveal").val();
+                canvasCtx.fillStyle = stepColor;
+                var drawNames = chkVal("chkShowMapRevealNames");
+                canvasCtx.font = `bold ${(parseInt(ammountWZ) - 4)}px Arial`;
+                if (createMapRevealEnabled) {
+                    canvasCtx.globalAlpha = 0.5;
+                }
+                currentRevealList.forEach((rev) => {
+                    if (JSON.stringify(rev) === JSON.stringify(currentSelectedRevealItem) && createMapRevealEnabled) return;
+                    if (rev.visible) {
+                        rev.steps.forEach((obj) => {
+                            canvasCtx.fillRect(currX + (obj.rx * ammountWZ), currY + (obj.ry * ammountWZ), ammountWZ, ammountWZ);
+                        });
+                        if (drawNames) {
+                            canvasCtx.save();
+                            var pos = rev.steps[0];
+                            canvasCtx.fillStyle = invertColor(stepColor);
+                            canvasCtx.fillText(rev.name, (currX + (pos.rx * ammountWZ)) + 4, (currY + (pos.ry * ammountWZ)) + (AMMOUNT - 8));
+                            canvasCtx.restore();
+                        }
+                    }
+                });
+                canvasCtx.restore();
+            }
         }
 
         function ExecuteCommand(cmd) {
@@ -185,6 +279,10 @@
 
                 case 13: //Layers
                     ShowHideLayerPanel(false);
+                    break;
+
+                case 14: //Map Reveal
+                    ShowHideMapRevealPanel(false);
                     break;
 
                 default:
@@ -259,8 +357,102 @@
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(13)" title="Layers">
                 <i class="glyphicon glyp-adj glyphicon-list-alt"></i>
             </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(14)" title="Map Reveal">
+                <i class="glyphicon glyp-adj glyphicon-eye-close"></i>
+            </a>
         </div>
+    </div>
 
+    <div id="mapRevealPanel" class="object-panel map-reveal-panel" style="display: none">
+        <table style="width: 100%;">
+            <tr>
+                <td><label class="lbl-header">Map Reveal Steps</label></td>
+            </tr>
+            <tr>
+                <td style="text-align: right">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-60p" style="font-weight: bold" title="Reveal Items Color">Color:</span>
+                        <input type="color" class="form-control input-sm" id="numColorMapReveal" value="#ffffff" oninput="ResetCanvas()" />
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="AddRevealItem()" title="Add Item">
+                                <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
+                            </a>
+                            <a class="btn btn-default" onclick="CloneRevealItem()" title="Clone Item">
+                                <i class="glyphicon glyphicon-copy"></i>&nbsp;Cln
+                            </a>
+                            <a class="btn btn-default" onclick="EditRevealItem()" title="Edit Item">
+                                <i class="glyphicon glyphicon-pencil"></i>&nbsp;Edt
+                            </a>
+                            <a class="btn btn-default" onclick="DeleteRevealItem()" title="Delete Item">
+                                <i class="glyphicon glyphicon-remove"></i>&nbsp;Del
+                            </a>
+                        </div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div style="margin-top: 5px"></div>
+                    <table style="width: 100%">
+                        <tr>
+                            <td>
+                                <label class="mc-toggle-switch">
+                                    <input class="mc-ts-check" type="checkbox" id="chkShowMapRevealNames" onclick="ResetCanvas()" />
+                                    <span class="mc-ts-slider round">
+                                    </span>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Hide Names</div>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Show Names</div>
+                                </label>
+                            </td>
+                            <td style="text-align: right">
+                                <label class="mc-toggle-switch">
+                                    <input class="mc-ts-check" type="checkbox" id="chkShowAllMapReveal" checked="checked" onclick="ResetCanvas()" />
+                                    <span class="mc-ts-slider round">
+                                    </span>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Hide All</div>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Show All</div>
+                                </label>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <table style="width: 100%">
+                        <tr>
+                            <td>
+                                <select multiple id="lstMapReveals" class="form-control input-sm" style="height: 232px" ondblclick="ChangeCurrentMapReveal()"></select>
+                            </td>
+                            <td style="width: 40px">
+                                <div class="btn-group btn-group-vertical">
+                                    <a class="btn btn-sm-adj btn-default" onclick="MoveRevealItem(0)" title="Move Map Up">
+                                        <i class="glyphicon glyp-adj glyphicon-arrow-up"></i>
+                                    </a>
+                                    <a class="btn btn-sm-adj btn-default" onclick="MoveRevealItem(1)" title="Move Map Down">
+                                        <i class="glyphicon glyp-adj glyphicon-arrow-down"></i>
+                                    </a>
+                                    <a class="btn btn-sm-adj btn-default" onclick="MoveRevealItem(2)" title="Move Map Left">
+                                        <i class="glyphicon glyp-adj glyphicon-arrow-left"></i>
+                                    </a>
+                                    <a class="btn btn-sm-adj btn-default" onclick="MoveRevealItem(3)" title="Move Map Right">
+                                        <i class="glyphicon glyp-adj glyphicon-arrow-right"></i>
+                                    </a>
+                                </div>
+                                <div class="btn-group btn-group-vertical">
+                                    <a class="btn btn-default" style="height: 50px" onclick="MoverRevealUp()" title="Move List Up">
+                                        <i class="glyphicon glyphicon-triangle-top"></i>
+                                    </a>
+                                    <a class="btn btn-default" style="height: 50px" onclick="MoverRevealDown()" title="Move List Down">
+                                        <i class="glyphicon glyphicon-triangle-bottom" style="top: 20px;"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
 
     <div class="object-panel layer-panel" id="layersPanel" style="display: none">
@@ -269,31 +461,56 @@
                 <td><label class="lbl-header">Layers</label></td>
             </tr>
             <tr>
-                <td style="text-align: right">
-                    <div class="input-group input-group-sm">
-                        <div class="input-group-btn">
-                            <a class="btn btn-default" onclick="AddLayer()" title="Add Layer">
-                                <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
-                            </a>
-                            <a class="btn btn-default" onclick="CloneLayer()" title="Clone Layer">
-                                <i class="glyphicon glyphicon-copy"></i>&nbsp;Clone
-                            </a>
-                            <a class="btn btn-default" onclick="DeleteLayer()" title="Delete Layer">
-                                <i class="glyphicon glyphicon-remove"></i>&nbsp;Rem
-                            </a>
-                            <a class="btn btn-default" onclick="MoverLayerUp()" title="Move Up">
-                                <i class="glyphicon glyphicon-triangle-top"></i>&nbsp;Up
-                            </a>
-                            <a class="btn btn-default" onclick="MoverLayerDown()" title="Move Down">
-                                <i class="glyphicon glyphicon-triangle-bottom"></i>&nbsp;Dwn
-                            </a>
-                        </div>
-                    </div>
+                <td>
+                    <table style="width: 100%">
+                        <tr>
+                            <td>
+                                <label class="mc-toggle-switch">
+                                    <input class="mc-ts-check" type="checkbox" id="chkShowAllLayer" checked="checked" onclick="UpdateSelectedLayer()" />
+                                    <span class="mc-ts-slider round">
+                                    </span>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show All</div>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide All</div>
+                                </label>
+                            </td>
+                            <td style="text-align: right; vertical-align: baseline;">
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-btn">
+                                        <a class="btn btn-default" onclick="AddLayer()" title="Add Layer">
+                                            <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
+                                        </a>
+                                        <a class="btn btn-default" onclick="CloneLayer()" title="Clone Layer">
+                                            <i class="glyphicon glyphicon-copy"></i>&nbsp;Cln
+                                        </a>
+                                        <a class="btn btn-default" onclick="DeleteLayer()" title="Delete Layer">
+                                            <i class="glyphicon glyphicon-remove"></i>&nbsp;Del
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <select multiple id="lstLayers" class="form-control input-sm" ondblclick="SelectCurrentLayer()"></select>
+                    <table style="width: 100%">
+                        <tr>
+                            <td>
+                                <select multiple id="lstLayers" class="form-control input-sm" style="height: 100px;" ondblclick="SelectCurrentLayer()"></select>
+                            </td>
+                            <td style="width: 40px">
+                                <div class="btn-group btn-group-vertical">
+                                    <a class="btn btn-default" style="height: 50px" onclick="MoverLayerUp()" title="Move Up">
+                                        <i class="glyphicon glyphicon-triangle-top"></i>
+                                    </a>
+                                    <a class="btn btn-default" style="height: 50px" onclick="MoverLayerDown()" title="Move Down">
+                                        <i class="glyphicon glyphicon-triangle-bottom" style="top: 20px;"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
                 </td>
             </tr>
             <tr>
@@ -303,7 +520,7 @@
                             <td colspan="3">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Name:</span>
-                                    <input type="text" class="form-control input-sm" id="txtLayerName" onblur="UpdateSelectedLayer()" />
+                                    <input type="text" class="form-control input-sm" id="txtLayerName" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                         </tr>
@@ -311,14 +528,14 @@
                             <td style="width: 150px">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">X:</span>
-                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerX" value="0" onblur="UpdateSelectedLayer()" />
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerX" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Y:</span>
-                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerY" value="0" onblur="UpdateSelectedLayer()" />
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerY" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                         </tr>
@@ -326,14 +543,14 @@
                             <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Width:</span>
-                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerW" value="0" onblur="UpdateSelectedLayer()" />
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerW" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Height:</span>
-                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerH" value="0" onblur="UpdateSelectedLayer()" />
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerH" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                         </tr>
@@ -341,7 +558,9 @@
                             <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
-                                    <input type="number" class="form-control input-sm" min="0.01" max="1" step=".01" id="numLayerOp" value="1" onblur="UpdateSelectedLayer()" pattern="^\d*(\.\d{0,2})?$" />
+                                    <div class="form-control input-sm">
+                                        <input type="range" min="0" max="1" step="0.1" id="numLayerOp" value="1" oninput="UpdateSelectedLayer()" />
+                                    </div>
                                 </div>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
@@ -357,20 +576,45 @@
                                 </div>
                             </td>
                         </tr>
+                    </table>
+                    <table style="width: 100%;margin-top: 5px">
                         <tr>
                             <td>
-                                <div class="form-group form-group-sm" style="margin: 5px 0 5px 3px;">
-                                    <label for="chkShowLayer" class="rem-select" title="Show/Hide Layer">
-                                        <input type="checkbox" id="chkShowLayer" checked="checked" onclick="UpdateSelectedLayer()">&nbsp;Show Layer
-                                    </label>
-                                </div>
+                                <label class="mc-toggle-switch">
+                                    <input class="mc-ts-check" type="checkbox" id="chkShowLayerOverlay" onclick="UpdateSelectedLayer()" />
+                                    <span class="mc-ts-slider round">
+                                    </span>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show Overlay</div>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide Overlay</div>
+                                </label>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
-                            <td style="text-align: right">
-                                <div class="form-group form-group-sm" style="margin: 5px 0 5px 3px;">
-                                    <label for="chkShowAllLayer" class="rem-select" title="Show/Hide Layer">
-                                        <input type="checkbox" id="chkShowAllLayer" checked="checked" onclick="ResetCanvas()">&nbsp;Show All
-                                    </label>
+                            <td style="text-align: right; vertical-align: baseline; ">
+                                <div class="input-group input-group-sm" title="Overlay Opacity">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">O.Opacity:</span>
+                                    <div class="form-control input-sm">
+                                        <input type="range" min="0" max="1" step="0.1" id="numLayerOverlayOp" value="1" oninput="UpdateSelectedLayer()" />
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                    <table style="width: 100%;">
+                        <tr>
+                            <td style="width: 170px">
+                                <label class="mc-toggle-switch">
+                                    <input class="mc-ts-check" type="checkbox" id="chkShowLayer" checked="checked" onclick="UpdateSelectedLayer()" />
+                                    <span class="mc-ts-slider round">
+                                    </span>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show Layer</div>
+                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide Layer</div>
+                                </label>
+                            </td>
+                            <td style="width: 8px">&nbsp;</td>
+                            <td style="vertical-align: baseline;">
+                                <div class="input-group input-group-sm" title="Overlay Color">
+                                    <span class="input-group-addon addon-60p" style="font-weight: bold">O.Color:</span>
+                                    <input type="color" class="form-control input-sm" id="numColorLayerOverlay" value="#000000" oninput="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                         </tr>
@@ -387,24 +631,40 @@
             </tr>
             <tr>
                 <td>
-                    <div class="form-group form-group-sm" style="margin-left: 3px; margin-bottom: 5px;">
-                        <label for="chkShowGrid" class="rem-select" title="Show/Hide Grid">
-                            <input type="checkbox" id="chkShowGrid" checked="checked" onclick="ResetCanvas()">&nbsp;Show Grid
-                        </label><br />
-                        <label for="chkHorizontal" class="rem-select" title="Rotate Map">
-                            <input type="checkbox" id="chkHorizontal" onclick="ResetCanvas()">&nbsp;Rotate Background
-                        </label><br />
-                        <label for="chkShowCoords" class="rem-select" title="Show/hide Coordinates">
-                            <input type="checkbox" id="chkShowCoords" onclick="ResetCanvas()">&nbsp;Show Coordinates
+                    <div style="margin-left: 3px; margin-bottom: 5px;">
+                        <label class="mc-toggle-switch">
+                            <input class="mc-ts-check" type="checkbox" id="chkShowGrid" checked="checked" onclick="ResetCanvas()" />
+                            <span class="mc-ts-slider round">
+                            </span>
+                            <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show Grid</div>
+                            <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide Grid</div>
+                        </label>
+                        <!--<label class="mc-toggle-switch">
+                            <input class="mc-ts-check" type="checkbox" id="chkHorizontal" onclick="ResetCanvas()" />
+                            <span class="mc-ts-slider round">
+                            </span>
+                            <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Backgrnd Rotated</div>
+                            <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Backgrnd Original</div>
+                        </label>-->
+                        <label class="mc-toggle-switch">
+                            <input class="mc-ts-check" type="checkbox" id="chkShowCoords" onclick="ResetCanvas()" />
+                            <span class="mc-ts-slider round">
+                            </span>
+                            <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Hide Coordinates</div>
+                            <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Show Coordinates</div>
                         </label>
                     </div>
                 </td>
             </tr>
             <tr>
                 <td>
+                    <div class="input-group input-group-sm" title="Background Color">
+                        <span class="input-group-addon addon-60p" style="font-weight: bold">BC:</span>
+                        <input type="color" class="form-control input-sm" id="numColorBk" value="#000000" oninput="ResetCanvas()" />
+                    </div>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">Box:</span>
-                        <input type="number" class="form-control input-sm" min="48" max="128" step="1" id="numBox" value="96" onblur="ResetCanvas()" />
+                        <input type="number" class="form-control input-sm" min="48" max="128" step="1" id="numBox" value="96" lazyblur="ResetCanvas()" />
                         <div class="input-group-btn">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></button>
                             <ul class="dropdown-menu" style="min-width: 50px !important;">
@@ -420,11 +680,11 @@
                     </div>
                     <div class="input-group input-group-sm" title="Background Complement X">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
-                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompX" value="0" onblur="ResetCanvas()" />
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompX" value="0" lazyblur="ResetCanvas()" />
                     </div>
                     <div class="input-group input-group-sm" title="Background Complement Y">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
-                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompY" value="0" onblur="ResetCanvas()" />
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompY" value="0" lazyblur="ResetCanvas()" />
                     </div>
                     <div class="input-group input-group-sm" title="Grid Color">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">GC:</span>
@@ -437,35 +697,52 @@
             </tr>
             <tr>
                 <td>
-                    <div class="form-group form-group-sm" style="margin-left: 3px; margin-bottom: 5px;">
-                        <label for="chkParallaxAnim" class="rem-select" title="Animate">
-                            <input type="checkbox" id="chkParallaxAnim" checked="checked" onclick="ResetCanvas()">&nbsp;Animate
-                        </label>
-                        <label for="chkParallaxRtl" class="rem-select" title="Right to Left">
-                            <input type="checkbox" id="chkParallaxRtl" checked="checked" onclick="ResetCanvas()">&nbsp;Right to Left
-                        </label>
-                        <label for="chkParallaxVertical" class="rem-select" title="Right to Left">
-                            <input type="checkbox" id="chkParallaxVertical" onclick="ResetCanvas()">&nbsp;Vertical
-                        </label>
-                    </div>
+                    <label class="mc-toggle-switch">
+                        <input class="mc-ts-check" type="checkbox" id="chkParallaxAnim" checked="checked" onclick="ResetCanvas()" />
+                        <span class="mc-ts-slider round">
+                        </span>
+                        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Animated</div>
+                        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Not Animated</div>
+                    </label>
+                    <label class="mc-toggle-switch">
+                        <input class="mc-ts-check" type="checkbox" id="chkParallaxRtl" onclick="ResetCanvas()" />
+                        <span class="mc-ts-slider round">
+                        </span>
+                        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Right to Left</div>
+                        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Left to Right</div>
+                    </label>
+                    <label class="mc-toggle-switch">
+                        <input class="mc-ts-check" type="checkbox" id="chkParallaxVertical" onclick="ResetCanvas()" />
+                        <span class="mc-ts-slider round">
+                        </span>
+                        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Vertical</div>
+                        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Horizontal</div>
+                    </label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">Speed:</span>
                         <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numkParallaxSpeed" value="2" onchange="ResetCanvas()" />
                     </div>
                     <div class="input-group input-group-sm" title="Parallax Complement X">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
-                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxX" value="0" onblur="ResetCanvas()" />
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxX" value="0" lazyblur="ResetCanvas()" />
                     </div>
                     <div class="input-group input-group-sm" title="Parallax Complement Y">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
-                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxY" value="0" onblur="ResetCanvas()" />
+                        <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxY" value="0" lazyblur="ResetCanvas()" />
+                    </div>
+                    <div class="input-group input-group-sm" title="Global Show">
+                        <span class="input-group-addon addon-74p" style="font-weight: bold">Global Show:</span>
+                        <div class="form-control input-sm">
+                            <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" oninput="ResetCanvas()" />
+                        </div>
                     </div>
                 </td>
             </tr>
         </table>
     </div>
+
     <div class="content">
-        <canvas id="baseCanvas" style="width: calc(100% - 2px); height: calc(100% - 2px); border:1px solid #000000;"></canvas>
+        <canvas id="baseCanvas" style="width: calc(100%); height: calc(100%);"></canvas>
     </div>
 </body>
 </html>

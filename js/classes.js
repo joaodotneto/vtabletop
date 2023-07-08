@@ -10,6 +10,9 @@
         this.angle = 0;
         this.visible = true;
         this.flipType = 0;
+        this.showOverlay = false;
+        this.overlayOpacity = 1.0;
+        this.overlayColor = "#000000";
         this.img = new Image();
     }
 
@@ -42,6 +45,13 @@
 
     draw(ctx) {
         if (!this.visible) return;
+        if (this.showOverlay) {
+            ctx.save();
+            ctx.fillStyle = this.overlayColor;
+            ctx.globalAlpha = this.overlayOpacity;
+            canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
+            ctx.restore();
+        }
         ctx.save();
         ctx.globalAlpha = this.transp;
         var pos = this.calcFlip(ctx, this.w, this.h);
@@ -130,3 +140,98 @@ class ParallaxBackground {
         ctx.restore();
     }
 }
+
+class MapReveal {
+    constructor() {
+        this.name = "";
+        this.visible = true;
+        this.steps = [];
+    }
+
+    translateSteps() {
+        this.steps.forEach((obj) => {
+            obj.x += obj.rx;
+            obj.y += obj.ry;
+        });
+    }
+
+    updateSteps(x, y) {
+        this.steps.forEach((obj) => {
+            obj.x += x;
+            obj.y += y;
+        });
+    }
+
+    get Name() {
+        var vis = this.visible ? "(V)" : "(H)";
+        return `${vis}-${this.name}`;
+    }
+}
+
+var bootstrapFloatAlert = function () {
+    var self = this;
+    this.baseTimeout = 2000;
+    this.baseMessage = function (message, alert, parent) {
+        $('<div id="bootstrapFloatAlert" class="alert alert-' + alert +
+            ' fade in"><button type="button" class="close" data-dismiss="alert" aria-hidden="true">×</button><b>' +
+            message + '&nbsp;&nbsp;</b></div>').appendTo((parent ? parent : 'body'));
+        setTimeout(function () {
+            $(".alert").alert('close');
+        }, self.baseTimeout);
+    }
+    /**
+    * Exibe um alerta flutuante de cor amarela (warning bootstrap) no canto superior direito do parent informado.
+    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
+    * @memberof BootstrapFloatAlert
+    * @public
+    * @example
+    * BootstrapFloatAlert.warning("Ocorreu um Erro!");
+    * BootstrapFloatAlert.warning("Ocorreu um Erro!", "divPainelExemplo");
+    */
+    this.warning = function (message, parent) {
+        self.baseMessage(message, 'warning', parent);
+    }
+    /**
+    * Exibe um alerta flutuante de cor verde (success bootstrap) no canto superior direito do parent informado.
+    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
+    * @memberof BootstrapFloatAlert
+    * @public
+    * @example
+    * BootstrapFloatAlert.success("Dado persistido corretamente!");
+    * BootstrapFloatAlert.success("Dado persistido corretamente!", "divPainelExemplo");
+    */
+    this.success = function (message, parent) {
+        self.baseMessage(message, 'success', parent);
+    }
+    /**
+    * Exibe um alerta flutuante de cor azul (info bootstrap) no canto superior direito do parent informado.
+    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
+    * @memberof BootstrapFloatAlert
+    * @public
+    * @example
+    * BootstrapFloatAlert.info("Dado persistido corretamente!");
+    * BootstrapFloatAlert.info("Dado persistido corretamente!", "divPainelExemplo");
+    */
+    this.info = function (message, parent) {
+        self.baseMessage(message, 'info', parent);
+    }
+    /**
+    * Exibe um alerta flutuante de cor vermelha (danger bootstrap) no canto superior direito do parent informado.
+    * Se o parent não for informado, ela surgirá no canto superior direito da tela.
+    * @memberof BootstrapFloatAlert
+    * @public
+    * @example
+    * BootstrapFloatAlert.danger("Ocorreu um Erro!");
+    * BootstrapFloatAlert.danger("Ocorreu um Erro!", "divPainelExemplo");
+    */
+    this.danger = function (message, parent) {
+        self.baseMessage(message, 'danger', parent);
+    }
+}
+/**
+* Funcionalidade estática para Exibição de alertas flutuantes.
+* @public
+* @class BootstrapFloatAlert
+* @static
+*/
+var BootstrapFloatAlert = new bootstrapFloatAlert();

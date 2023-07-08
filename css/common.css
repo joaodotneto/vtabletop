@@ -60,7 +60,6 @@
     position: absolute;
     z-index: 1000;
     width: 200px;
-    height: 485px;
     background: #ccc;
     top: 41px;
     right: 71px;
@@ -82,3 +81,183 @@
 .lbl-header {
     color: #422e97;
 }
+
+/* ######################################## */
+/* Toggle Switch */
+.mc-toggle-switch-sm {
+    position: relative;
+    display: inline-block;
+    width: 36px;
+    height: 16px;
+}
+
+    .mc-toggle-switch-sm input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+
+.mc-ts-slider-sm {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /*background-color: #777;*/
+    background-color: #ce0303;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+    .mc-ts-slider-sm:before {
+        position: absolute;
+        content: "";
+        height: 12px;
+        width: 12px;
+        left: 2px;
+        bottom: 2px;
+        background-color: white;
+        -webkit-transition: .1s;
+        transition: .1s;
+    }
+
+.mc-ts-check-sm:checked + .mc-ts-slider-sm {
+    /*background-color: #2196F3;*/
+    background-color: #1e881e;
+}
+
+.mc-ts-check-sm:disabled + .mc-ts-slider-sm {
+    /*background-color: #2196F3;*/
+    background-color: #777 !important;
+}
+
+.mc-ts-check-sm:focus + .mc-ts-slider-sm {
+    /*box-shadow: 0 0 1px #2196F3;*/
+    box-shadow: 0 0 1px #1e881e;
+}
+
+.mc-ts-check-sm:checked + .mc-ts-slider-sm:before {
+    -webkit-transform: translateX(20px);
+    -ms-transform: translateX(20px);
+    transform: translateX(20px);
+}
+
+.mc-ts-slider-sm.round {
+    border-radius: 20px;
+}
+
+    .mc-ts-slider-sm.round:before {
+        border-radius: 50%;
+    }
+
+/* Switch Maior */
+.mc-toggle-switch {
+    position: relative;
+    display: inline-block;
+    width: 80px;
+    height: 30px;
+}
+
+    .mc-toggle-switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+.mc-ts-slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    /*background-color: #777;*/
+    background-color: #ce0303;
+    -webkit-transition: .4s;
+    transition: .4s;
+}
+
+    .mc-ts-slider:before {
+        position: absolute;
+        content: "";
+        height: 22px;
+        width: 22px;
+        left: 6px;
+        bottom: 4px;
+        background-color: white;
+        -webkit-transition: .1s;
+        transition: .1s;
+    }
+
+.mc-ts-toggle-title {
+    color: white;
+    margin-top: 8px;
+    font-size: 12px;
+    font-family: verdana;
+    font-weight: bold;
+    position: absolute;
+    top: 0;
+}
+
+.mc-ts-toggle-title-yes {
+    margin-left: 14px;
+    display: none;
+}
+
+.mc-ts-toggle-title-no {
+    margin-left: 36px;
+}
+
+.mc-ts-check:checked + .mc-ts-slider:before {
+    -webkit-transform: translateX(46px);
+    -ms-transform: translateX(46px);
+    transform: translateX(46px);
+}
+
+.mc-ts-check:checked + .mc-ts-slider {
+    /*background-color: #2196F3;*/
+    background-color: #1e881e;
+}
+
+    .mc-ts-check:checked + .mc-ts-slider + .mc-ts-toggle-title-yes {
+        display: block;
+    }
+
+        .mc-ts-check:checked + .mc-ts-slider + .mc-ts-toggle-title-yes + .mc-ts-toggle-title-no {
+            visibility: hidden !important;
+        }
+
+.mc-ts-check:disabled + .mc-ts-slider {
+    /*background-color: #2196F3;*/
+    background-color: #777 !important;
+}
+
+.mc-ts-check:focus + .mc-ts-slider {
+    /*box-shadow: 0 0 1px #2196F3;*/
+    box-shadow: 0 0 1px #1e881e;
+}
+
+.mc-ts-slider.round {
+    border-radius: 34px;
+}
+
+    .mc-ts-slider.round:before {
+        border-radius: 50%;
+    }
+/* Exemplo de Uso:
+    <label class="mc-toggle-switch-sm">
+      <input class="mc-ts-check-sm" type="checkbox" id="chkTeste" checked />
+      <span class="mc-ts-slider-sm round"></span>
+    </label>
+
+    <label class="mc-toggle-switch">
+	    <input class="mc-ts-check" type="checkbox" id="chkTeste" />
+   	    <span class="mc-ts-slider round">
+	    </span>
+        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Sim</div>
+        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Não</div>
+    </label>
+*/
+/* ######################################## */
