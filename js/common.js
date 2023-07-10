@@ -7,6 +7,12 @@ var Keys = {
     Left: 37
 }
 
+var MouseKey = {
+    Left: 1,
+    Mid: 2,
+    Right: 3
+}
+
 var LastOpenedHandle = null;
 var canvasObj = null;
 var canvasCtx = null;
@@ -14,12 +20,14 @@ var currentX = 0;
 var currentY = 0;
 var parallaxX = 0;
 var parallaxY = 0;
+var parallaxOp = 1.0;
 var lastFrameTime = null;
 var showAnimation = true;
 var parallaxBack = null;
 var parallaxDirection = false;
 var parallaxVertical = false;
 var parallaxSpeed = 2.0;
+var parallaxStretch = false;
 var isDraggable = false;
 var currentImg = new Image();
 var AMMOUNT = 96;
@@ -281,19 +289,28 @@ function ConfigureCanvas() {
     canvasCtx.canvas.width = window.innerWidth;
     canvasCtx.canvas.height = window.innerHeight;
 
+    canvasObj.addEventListener("contextmenu", (e) => {
+        e.preventDefault();
+        return false;
+    });
+
     canvasObj.addEventListener("mouseup", (e) => {
-        //TODO: Se houver ações de colocação ou retirada, devem vir aqui
+        if (e.which == MouseKey.Right) {
+            e.preventDefault();
+            if (createMapRevealEnabled) {
+                AskCancelMapRevealCreation();
+            }
+            return false;
+        }
+
         if (createMapRevealEnabled) {
             AddMapRevealStep(e);
-        } else {
-            //ShowHideObjectPanel(true);
-            //ShowHideLayerPanel(true);
-            //ShowHideMapRevealPanel(true);
+            return false;
         }
     });
 
     canvasObj.addEventListener("mousemove", (e) => {
-        AMMOUNT = parseInt($("#numBox").val());
+        AMMOUNT = getInt("numBox");
         var cr = canvasObj.getBoundingClientRect();
         var mr = new DOMPoint(e.clientX, e.clientY, 0, 0);
         var mx = parseInt((mr.x - cr.left) / AMMOUNT);
@@ -301,14 +318,14 @@ function ConfigureCanvas() {
         if (lastMouseX != mx || lastMouseY != my) {
             lastMouseX = mx;
             lastMouseY = my;
-            var posX = (currentX / AMMOUNT);
-            var posY = (currentY / AMMOUNT);
-            console.log(`${lastMouseX} - ${lastMouseY} / ${(posX + lastMouseX)} - ${(posY + lastMouseY)}`);
+            if (createMapRevealEnabled && e.shiftKey) {
+                AddMapRevealStep(e);
+            }
         }
     });
-    /*
+    
     canvasObj.addEventListener('wheel', (e) => {
-        if (!shftKey) return;
+        if (!e.shiftKey) return;
         var newVal = e.deltaY * SCROLL_SENSITIVITY;
         var numCompZ = $("#numCompZ");
         var curVal = parseFloat(numCompZ.val());
@@ -316,7 +333,6 @@ function ConfigureCanvas() {
         numCompZ.val(curVal);
         SetCanvasZoom();
     });
-    */
 
     $('html').keydown(function (e) {
         var keyCode = e.which ?? e.keyCode;
@@ -457,6 +473,7 @@ function WriteSettings() {
             Spd: getFloat("numkParallaxSpeed", 1.0),
             X: getInt("numParallaxX"),
             Y: getInt("numParallaxY"),
+            Opacity: getFloat("numParallaxOp"),
             Image: parallaxBack == null ? null : GetImageAsBase64(parallaxBack.img)
         }
     };
@@ -515,6 +532,7 @@ function ParseAndApplySettings(result) {
         $("#numkParallaxSpeed").val(objP.Spd);
         $("#numParallaxX").val(objP.X);
         $("#numParallaxY").val(objP.Y);
+        $("#numParallaxOp").val(objP.Opacity ?? 1.0);
         $("#chkParallaxAnim").prop("checked", objP.Anim);
         $("#chkParallaxRtl").prop("checked", objP.Dir);
         $("#chkParallaxVertical").prop("checked", objP.Ver);
@@ -553,8 +571,11 @@ function ParseAndApplySettings(result) {
     currentImg.src = objInp.Image;
 }
 
-function DrawScroll() {
-    if (!showAnimation) return;
+function RenderParallax() {
+    if (!showAnimation) {
+        if (parallaxBack) parallaxBack.draw(canvasCtx, 0);
+        return;
+    }
     var now = Date.now();
     var deltaSeconds = (now - lastFrameTime) / parseInt(parallaxSpeed * 100);
     lastFrameTime = now;
@@ -712,6 +733,10 @@ function UpdateSelectedLayer() {
     }
 }
 
+function CalcProportion(prop, val, newProp) {
+    return Math.floor(parseFloat((val * prop) / newProp));
+}
+
 function AddRevealItem() {
     CreateRevealItemAlert();
     createMapRevealEnabled = true;
@@ -726,12 +751,26 @@ function AddMapRevealStep(e) {
     var my = parseInt((mr.y - cr.top) / AMMOUNT);
     var pX = (currentX / AMMOUNT) * -1;
     var pY = (currentY / AMMOUNT) * -1;
-    var idx = currentRevealSteps.findIndex((a) => { return a.x == mx && a.y == my });
+    var rx = (pX + mx);
+    var ry = (pY + my);
+    var idx = currentRevealSteps.findIndex((a) => { return a.x == rx && a.y == ry });
     if (idx > -1) {
         currentRevealSteps.splice(idx, 1);
     } else {
-        currentRevealSteps.push({ x: mx, y: my, rx: (pX + mx), ry: (pY + my) });
+        currentRevealSteps.push({ x: rx, y: ry });
     }
+}
+
+function AskCancelMapRevealCreation() {
+    var cancel = confirm('Really want to cancel this Reveal edition?');
+    if (!cancel) return;
+    CancelMapRevealCreation();
+}
+
+function CancelMapRevealCreation() {
+    $("#alertMapRevealCreate").alert('close');
+    createMapRevealEnabled = false;
+    currentRevealSteps = [];
 }
 
 function FinishAddMapRevealStep(event) {
@@ -743,22 +782,22 @@ function FinishAddMapRevealStep(event) {
     }
     var mapRevealName = prompt("Give this map reveal a Name:", revealName);
     if (!mapRevealName) return;
-
-    $("#alertMapRevealCreate").alert('close');
-    createMapRevealEnabled = false;
+    var proportion = getInt("numBox");
     if (currentSelectedRevealItem) {
         currentSelectedRevealItem.name = mapRevealName;
         currentSelectedRevealItem.steps = [...currentRevealSteps];
+        currentSelectedRevealItem.proportion = proportion;
         currentSelectedRevealItem = null;
     } else {
         var newReveal = new MapReveal();
         newReveal.name = mapRevealName;
         newReveal.steps = [...currentRevealSteps];
+        newReveal.proportion = proportion;
         currentRevealList.push(newReveal);
     }
-    currentRevealSteps = [];
+    CancelMapRevealCreation();
     RefreshMapRevealList(keepSelected);
-    event.stopPropagation();
+    event.preventDefault();
 }
 
 function RefreshMapRevealList(keepSelection = true) {
@@ -830,8 +869,29 @@ function DeleteRevealItem() {
 
 function CreateRevealItemAlert() {
     var alert = `<div class="alert alert-warning alert-map-reveal" id="alertMapRevealCreate" role="alert" onclick="FinishAddMapRevealStep(event)">
-                <b>Click over the locals of the map that compose the reveal.</b><br />
+                <b><i>Left Click</i> over the locals of the map that compose the reveal.</b><br />
+                <b><i>Right Click</i> to cancel.</b><br />
                 <b>Click HERE to complete.</b><br />
             </div>`;
     $(alert).appendTo('body');
+}
+
+function CreateToggle(id, target, checked, onclick, noTitle, yesTitle) {
+    var isCheck = checked ? `checked="checked"` : "";
+    var hvOnClick = onclick ? `onclick="${onclick}"` : "";
+    var html = `<label class="mc-toggle-switch">
+        <input class="mc-ts-check" type="checkbox" id="${id}" ${isCheck} ${hvOnClick} />
+        <span class="mc-ts-slider round">
+        </span>
+        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>${yesTitle}</div>
+        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>${noTitle}</div>
+    </label>`;
+    $(`#${target}`).html(html);
+}
+
+function CreateButton(title, caption, icon, cssclass, style, onclick) {
+    hvCaption = caption ? "&nbsp;" + caption : "";
+    hvStyle = style ? `style="${style}"` : "";
+    return `<a class="btn btn-default ${cssclass}" ${hvStyle} onclick="${onclick}" title="${title}">
+        <i class="glyphicon glyphicon-${icon}"></i>${hvCaption}</a>`;
 }

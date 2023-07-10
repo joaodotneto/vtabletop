@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="css/common.css?1" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?1"></script>
+    <script type="text/javascript" src="js/common.js?2"></script>
     <script type="text/javascript" src="js/classes.js?1"></script>
     <style type="text/css">
         @media screen and (min-width: 1300px) {
@@ -33,7 +33,7 @@
             transform: translateX(136px);
         }
 
-        .layer-panel, .map-reveal-panel {
+        .layer-panel, .map-reveal-panel, .object-panel {
             width: 370px;
         }
 
@@ -70,16 +70,36 @@
                     console.log(e);
                 }
             });
+            CreateToggles();
             ConfigureCanvas();
             ResetCanvas();
         });
+
+        function CreateToggles() {
+            //Reveal Items
+            CreateToggle("chkShowMapRevealNames", "tdShowMapRevealNames", false, "ResetCanvas()", "Hide Names", "Show Names");
+            CreateToggle("chkShowAllMapReveal", "tdShowAllMapReveal", true, "ResetCanvas()", "Hide All", "Show All");
+            //Layers
+            CreateToggle("chkShowAllLayer", "tdShowAllLayer", true, "UpdateSelectedLayer()", "Hide All", "Show All");
+            CreateToggle("chkShowLayerOverlay", "tdShowLayerOverlay", false, "UpdateSelectedLayer()", "Hide Overlay", "Show Overlay");
+            CreateToggle("chkShowLayer", "tdShowLayer", true, "UpdateSelectedLayer()", "Hide Layer", "Show Layer");
+            //Settings
+            CreateToggle("chkShowGrid", "divShowGrid", true, "ResetCanvas()", "Hide Grid", "Show Grid");
+            CreateToggle("chkHorizontal", "divHorizontal", false, "ResetCanvas()", "Backgrnd Original", "Backgrnd Rotated");
+            CreateToggle("chkShowCoords", "divShowCoords", false, "ResetCanvas()", "Hide Coordinates", "Show Coordinates");
+            //Parallax
+            CreateToggle("chkParallaxAnim", "divParallaxAnim", true, "ResetCanvas()", "Not Animated", "Animated");
+            CreateToggle("chkParallaxRtl", "divParallaxRtl", false, "ResetCanvas()", "Left to Right", "Right to Left");
+            CreateToggle("chkParallaxVertical", "divParallaxVertical", false, "ResetCanvas()", "Horizontal", "Vertical");
+            CreateToggle("chkParallaxStretch", "divParallaxStretch", false, "ResetCanvas()", "Resize To Fit", "Default");
+        }
 
         function ResetCanvas() {
             requestAnimationFrame(ResetCanvas);
 
             canvasObj.width = window.innerWidth;
             canvasObj.height = window.innerHeight;
-
+            currentDarken = getFloat("numGlobalShow");
             var cmpX = getInt("numCompX");
             var cmpY = getInt("numCompY");
             var rott = chkVal("chkHorizontal");
@@ -88,16 +108,25 @@
             var slrs = chkVal("chkShowAllLayer");
             var back = $("#numColorBk").val();
 
-            currentDarken = getFloat("numGlobalShow");
-
-            //Cor de fundo
-            canvasCtx.fillStyle = back;
-            canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
-
+            //Zoom and Box Settings
             AMMOUNT = getInt("numBox");
             var ammountWZ = AMMOUNT * cameraZoom;
             var currX = currentX + cmpX;
             var currY = currentY + cmpY;
+
+            //Parallax settings
+            showAnimation = chkVal("chkParallaxAnim");
+            parallaxDirection = chkVal("chkParallaxRtl");
+            parallaxVertical = chkVal("chkParallaxVertical");
+            parallaxSpeed = getFloat("numkParallaxSpeed");
+            parallaxX = getInt("numParallaxX");
+            parallaxY = getInt("numParallaxY");
+            parallaxOp = getFloat("numParallaxOp");
+            parallaxStretch = chkVal("chkParallaxStretch");
+
+            //Background Color
+            canvasCtx.fillStyle = back;
+            canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
 
             if (rott) {
                 var centerX = (currentImg.width) / 2;
@@ -107,67 +136,42 @@
                 canvasCtx.translate(-centerX, -centerY);
             }
 
-            //Configurações do Parallax
-            showAnimation = chkVal("chkParallaxAnim");
-            parallaxDirection = chkVal("chkParallaxRtl");
-            parallaxVertical = chkVal("chkParallaxVertical");
-            parallaxSpeed = getFloat("numkParallaxSpeed");
-            parallaxX = getInt("numParallaxX");
-            parallaxY = getInt("numParallaxY");
+            //Parallax
+            RenderParallax();
 
-            DrawScroll();
+            //Background
+            canvasCtx.drawImage(currentImg, currX, currY, currentImg.width * cameraZoom, currentImg.height * cameraZoom);
 
-            canvasCtx.drawImage(currentImg, currX, currY,
-                currentImg.width * cameraZoom,
-                currentImg.height * cameraZoom);
-
-            /*
-            Fog of War
-            // Create gradient, from middle to borders
-            var size = AMMOUNT * 6;
-            var gradient = canvasCtx.createRadialGradient(150, 150, 0, 150, 150, 150);
-            // Opaque white in the middle
-            gradient.addColorStop(0, 'rgba(255,255,255,0)');
-            // Transparent white at the borders
-            gradient.addColorStop(1, 'rgba(255,255,255,1)');
-
-            canvasCtx.globalCompositeOperation = 'destination-out';
-            canvasCtx.fillStyle = gradient;
-            canvasCtx.fillRect(0, 0, size, size);
-            */
-
+            //Layers
             if (slrs) {
                 layers.forEach((layer) => {
-                    layer.draw(canvasCtx);
+                    layer.draw(canvasCtx, currX, currY);
                 });
             }
 
-            if (rott) {
-                canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
-            }
-
-            if (createMapRevealEnabled) {
-                var cc = hexToRgb($("#numColor").val());
-                canvasCtx.fillStyle = `rgba(${cc.r}, ${cc.g}, ${cc.b}, 0.5)`;
-                canvasCtx.fillRect((lastMouseX * AMMOUNT), (lastMouseY * AMMOUNT), AMMOUNT, AMMOUNT);
-
-                canvasCtx.save();
-                canvasCtx.fillStyle = $("#numColorMapReveal").val();
-                currentRevealSteps.forEach((obj) => {
-                    canvasCtx.fillRect(currX + (obj.rx * ammountWZ), currY + (obj.ry * ammountWZ), ammountWZ, ammountWZ);
-                });
-                canvasCtx.restore();
-            }
-
+            //Reveals
+            RenderRevealCreate(currX, currY, ammountWZ);
             RenderRevealList(currX, currY, ammountWZ);
 
+            if (rott) canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
+
+            //Fade
+            RenderOverlay();
+
+            //Grid and Coords
+            RenderGridAndCoords(grid, cord);
+        }
+
+        function RenderOverlay() {
             if (currentDarken > 0) {
                 canvasCtx.save();
                 canvasCtx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
                 canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
                 canvasCtx.restore();
             }
+        }
 
+        function RenderGridAndCoords(grid, cord) {
             var stepsV = (window.innerWidth / AMMOUNT) + 1;
             var stepsH = (window.innerHeight / AMMOUNT) + 1;
             canvasCtx.save();
@@ -189,6 +193,21 @@
             canvasCtx.restore();
         }
 
+        function RenderRevealCreate(currX, currY, ammountWZ) {
+            if (createMapRevealEnabled) {
+                var cc = hexToRgb($("#numColor").val());
+                canvasCtx.fillStyle = `rgba(${cc.r}, ${cc.g}, ${cc.b}, 0.5)`;
+                canvasCtx.fillRect((lastMouseX * AMMOUNT), (lastMouseY * AMMOUNT), AMMOUNT, AMMOUNT);
+
+                canvasCtx.save();
+                canvasCtx.fillStyle = $("#numColorMapReveal").val();
+                currentRevealSteps.forEach((obj) => {
+                    canvasCtx.fillRect(currX + (obj.x * ammountWZ), currY + (obj.y * ammountWZ), ammountWZ, ammountWZ);
+                });
+                canvasCtx.restore();
+            }
+        }
+
         function RenderRevealList(currX, currY, ammountWZ) {
             var showAll = chkVal("chkShowAllMapReveal");
             if (!showAll) return;
@@ -205,13 +224,17 @@
                     if (JSON.stringify(rev) === JSON.stringify(currentSelectedRevealItem) && createMapRevealEnabled) return;
                     if (rev.visible) {
                         rev.steps.forEach((obj) => {
-                            canvasCtx.fillRect(currX + (obj.rx * ammountWZ), currY + (obj.ry * ammountWZ), ammountWZ, ammountWZ);
+                            var propX = CalcProportion(rev.Proportion, obj.x, AMMOUNT);
+                            var propY = CalcProportion(rev.Proportion, obj.y, AMMOUNT);
+                            canvasCtx.fillRect(currX + (propX * ammountWZ), currY + (propY * ammountWZ), ammountWZ, ammountWZ);
                         });
                         if (drawNames) {
                             canvasCtx.save();
                             var pos = rev.steps[0];
+                            var propX = CalcProportion(rev.Proportion, pos.x, AMMOUNT);
+                            var propY = CalcProportion(rev.Proportion, pos.y, AMMOUNT);
                             canvasCtx.fillStyle = invertColor(stepColor);
-                            canvasCtx.fillText(rev.name, (currX + (pos.rx * ammountWZ)) + 4, (currY + (pos.ry * ammountWZ)) + (AMMOUNT - 8));
+                            canvasCtx.fillText(rev.name, (currX + (propX * ammountWZ)) + 4, (currY + (propY * ammountWZ)) + (ammountWZ - 8));
                             canvasCtx.restore();
                         }
                     }
@@ -308,20 +331,20 @@
                 <td style="width: 258px">
                     <div class="input-group input-group-sm">
                         <div class="input-group-btn">
-                            <a class="btn btn-default" onclick="LoadBackground()" title="Background">
-                                <i class="glyphicon glyphicon-picture"></i>&nbsp;Background
-                            </a>
-                            <a class="btn btn-default" onclick="LoadParallax()" title="Parallax">
-                                <i class="glyphicon glyphicon-picture"></i>&nbsp;Parallax
-                            </a>
                             <a class="btn btn-default" onclick="WriteSettings()" title="Save Settings">
                                 <i class="glyphicon glyphicon-save"></i>&nbsp;Save
                             </a>
                             <a class="btn btn-default" onclick="ReadSettings()" title="Load Settings">
                                 <i class="glyphicon glyphicon-open"></i>&nbsp;Open
                             </a>
-                            <a class="btn btn-default" onclick="ResetAdjusts()" title="Reset">
-                                <i class="glyphicon glyphicon-refresh"></i>&nbsp;Reset
+                            <a class="btn btn-default" onclick="ExecuteCommand(12)" title="Settings">
+                                <i class="glyphicon glyphicon-cog"></i>&nbsp;Settings
+                            </a>
+                            <a class="btn btn-default" onclick="ExecuteCommand(13)" title="Layers">
+                                <i class="glyphicon glyphicon-list-alt"></i>&nbsp;Layers
+                            </a>
+                            <a class="btn btn-default" onclick="ExecuteCommand(14)" title="Map Reveal">
+                                <i class="glyphicon glyphicon-eye-close"></i>&nbsp;Map Reveal
                             </a>
                         </div>
                     </div>
@@ -351,15 +374,6 @@
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(5)">CX-</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(6)">CY+</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(7)">CY-</a>
-            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(12)" title="Settings">
-                <i class="glyphicon glyp-adj glyphicon-cog"></i>
-            </a>
-            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(13)" title="Layers">
-                <i class="glyphicon glyp-adj glyphicon-list-alt"></i>
-            </a>
-            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(14)" title="Map Reveal">
-                <i class="glyphicon glyp-adj glyphicon-eye-close"></i>
-            </a>
         </div>
     </div>
 
@@ -395,24 +409,8 @@
                     <div style="margin-top: 5px"></div>
                     <table style="width: 100%">
                         <tr>
-                            <td>
-                                <label class="mc-toggle-switch">
-                                    <input class="mc-ts-check" type="checkbox" id="chkShowMapRevealNames" onclick="ResetCanvas()" />
-                                    <span class="mc-ts-slider round">
-                                    </span>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Hide Names</div>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Show Names</div>
-                                </label>
-                            </td>
-                            <td style="text-align: right">
-                                <label class="mc-toggle-switch">
-                                    <input class="mc-ts-check" type="checkbox" id="chkShowAllMapReveal" checked="checked" onclick="ResetCanvas()" />
-                                    <span class="mc-ts-slider round">
-                                    </span>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Hide All</div>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Show All</div>
-                                </label>
-                            </td>
+                            <td id="tdShowMapRevealNames"></td>
+                            <td id="tdShowAllMapReveal" style="text-align: right"></td>
                         </tr>
                     </table>
                 </td>
@@ -422,7 +420,8 @@
                     <table style="width: 100%">
                         <tr>
                             <td>
-                                <select multiple id="lstMapReveals" class="form-control input-sm" style="height: 232px" ondblclick="ChangeCurrentMapReveal()"></select>
+                                <select multiple id="lstMapReveals" class="form-control input-sm" style="height: 232px"
+                                        ondblclick="ChangeCurrentMapReveal()"></select>
                             </td>
                             <td style="width: 40px">
                                 <div class="btn-group btn-group-vertical">
@@ -464,15 +463,7 @@
                 <td>
                     <table style="width: 100%">
                         <tr>
-                            <td>
-                                <label class="mc-toggle-switch">
-                                    <input class="mc-ts-check" type="checkbox" id="chkShowAllLayer" checked="checked" onclick="UpdateSelectedLayer()" />
-                                    <span class="mc-ts-slider round">
-                                    </span>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show All</div>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide All</div>
-                                </label>
-                            </td>
+                            <td id="tdShowAllLayer"></td>
                             <td style="text-align: right; vertical-align: baseline;">
                                 <div class="input-group input-group-sm">
                                     <div class="input-group-btn">
@@ -528,14 +519,14 @@
                             <td style="width: 150px">
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">X:</span>
-                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerX" value="0" lazyblur="UpdateSelectedLayer()" />
+                                    <input type="number" class="form-control input-sm" min="-960" step="1" id="numLayerX" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Y:</span>
-                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerY" value="0" lazyblur="UpdateSelectedLayer()" />
+                                    <input type="number" class="form-control input-sm" min="-960" step="1" id="numLayerY" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                         </tr>
@@ -579,15 +570,7 @@
                     </table>
                     <table style="width: 100%;margin-top: 5px">
                         <tr>
-                            <td>
-                                <label class="mc-toggle-switch">
-                                    <input class="mc-ts-check" type="checkbox" id="chkShowLayerOverlay" onclick="UpdateSelectedLayer()" />
-                                    <span class="mc-ts-slider round">
-                                    </span>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show Overlay</div>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide Overlay</div>
-                                </label>
-                            </td>
+                            <td id="tdShowLayerOverlay"></td>
                             <td style="width: 8px">&nbsp;</td>
                             <td style="text-align: right; vertical-align: baseline; ">
                                 <div class="input-group input-group-sm" title="Overlay Opacity">
@@ -601,15 +584,7 @@
                     </table>
                     <table style="width: 100%;">
                         <tr>
-                            <td style="width: 170px">
-                                <label class="mc-toggle-switch">
-                                    <input class="mc-ts-check" type="checkbox" id="chkShowLayer" checked="checked" onclick="UpdateSelectedLayer()" />
-                                    <span class="mc-ts-slider round">
-                                    </span>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show Layer</div>
-                                    <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide Layer</div>
-                                </label>
-                            </td>
+                            <td id="tdShowLayer" style="width: 170px"></td>
                             <td style="width: 8px">&nbsp;</td>
                             <td style="vertical-align: baseline;">
                                 <div class="input-group input-group-sm" title="Overlay Color">
@@ -627,33 +602,53 @@
     <div class="object-panel" id="objectPanel" style="display: none">
         <table style="width: 100%;">
             <tr>
-                <td><label class="lbl-header">Settings</label></td>
+                <td colspan="3"><label class="lbl-header">Settings</label></td>
+            </tr>
+            <tr>
+                <td style="width: 50%">
+                    <div class="input-group input-group-sm" title="Global Show" style="margin-bottom: 3px">
+                        <span class="input-group-addon addon-74p" style="font-weight: bold">Fog:</span>
+                        <div class="form-control input-sm">
+                            <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" oninput="ResetCanvas()" />
+                        </div>
+                    </div>
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td>
+                    <div id="divShowGrid"></div>
+                </td>
             </tr>
             <tr>
                 <td>
-                    <div style="margin-left: 3px; margin-bottom: 5px;">
-                        <label class="mc-toggle-switch">
-                            <input class="mc-ts-check" type="checkbox" id="chkShowGrid" checked="checked" onclick="ResetCanvas()" />
-                            <span class="mc-ts-slider round">
-                            </span>
-                            <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Show Grid</div>
-                            <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Hide Grid</div>
-                        </label>
-                        <!--<label class="mc-toggle-switch">
-                            <input class="mc-ts-check" type="checkbox" id="chkHorizontal" onclick="ResetCanvas()" />
-                            <span class="mc-ts-slider round">
-                            </span>
-                            <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Backgrnd Rotated</div>
-                            <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Backgrnd Original</div>
-                        </label>-->
-                        <label class="mc-toggle-switch">
-                            <input class="mc-ts-check" type="checkbox" id="chkShowCoords" onclick="ResetCanvas()" />
-                            <span class="mc-ts-slider round">
-                            </span>
-                            <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Hide Coordinates</div>
-                            <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Show Coordinates</div>
-                        </label>
+                    <div class="input-group input-group-sm" style="margin-bottom: 3px">
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="LoadBackground()" title="Background">
+                                <i class="glyphicon glyphicon-picture"></i>&nbsp;Background
+                            </a>
+                            <a class="btn btn-default" onclick="LoadParallax()" title="Parallax">
+                                <i class="glyphicon glyphicon-picture"></i>&nbsp;Parallax
+                            </a>
+                        </div>
                     </div>
+                </td>
+                <td></td>
+                <td>
+                    <div id="divHorizontal"></div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="input-group input-group-sm" style="margin-bottom: 5px">
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" style="width: 100%" onclick="ResetAdjusts()" title="Reset">
+                                <i class="glyphicon glyphicon-refresh"></i>&nbsp;Reset Settings
+                            </a>
+                        </div>
+                    </div>
+                </td>
+                <td></td>
+                <td>
+                    <div id="divShowCoords"></div>
                 </td>
             </tr>
             <tr>
@@ -662,6 +657,17 @@
                         <span class="input-group-addon addon-60p" style="font-weight: bold">BC:</span>
                         <input type="color" class="form-control input-sm" id="numColorBk" value="#000000" oninput="ResetCanvas()" />
                     </div>
+                </td>
+                <td></td>
+                <td>
+                    <div class="input-group input-group-sm" title="Grid Color">
+                        <span class="input-group-addon addon-60p" style="font-weight: bold">GC:</span>
+                        <input type="color" class="form-control input-sm" id="numColor" value="#ff0000" oninput="ResetCanvas()" />
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">Box:</span>
                         <input type="number" class="form-control input-sm" min="48" max="128" step="1" id="numBox" value="96" lazyblur="ResetCanvas()" />
@@ -674,66 +680,74 @@
                             </ul>
                         </div>
                     </div>
+                </td>
+                <td></td>
+                <td>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">Zoom:</span>
                         <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numCompZ" value="1" onchange="SetCanvasZoom()" pattern="^\d*(\.\d{0,2})?$" />
                     </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
                     <div class="input-group input-group-sm" title="Background Complement X">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
                         <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompX" value="0" lazyblur="ResetCanvas()" />
                     </div>
+                </td>
+                <td></td>
+                <td>
                     <div class="input-group input-group-sm" title="Background Complement Y">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
                         <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompY" value="0" lazyblur="ResetCanvas()" />
                     </div>
-                    <div class="input-group input-group-sm" title="Grid Color">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">GC:</span>
-                        <input type="color" class="form-control input-sm" id="numColor" value="#ff0000" oninput="ResetCanvas()" />
-                    </div>
                 </td>
             </tr>
             <tr>
-                <td><label class="lbl-header" style="margin-top: 10px;">Parallax Settings</label></td>
+                <td colspan="3">
+                    <div style="margin-top: 8px"></div>
+                    <label class="lbl-header">Parallax Settings</label>
+                </td>
+            </tr>
+            <tr>
+                <td><div id="divParallaxAnim"></div></td>
+                <td></td>
+                <td><div id="divParallaxRtl"></div></td>
+            </tr>
+            <tr>
+                <td><div id="divParallaxVertical"></div></td>
+                <td></td>
+                <td><div id="divParallaxStretch"></div></td>
             </tr>
             <tr>
                 <td>
-                    <label class="mc-toggle-switch">
-                        <input class="mc-ts-check" type="checkbox" id="chkParallaxAnim" checked="checked" onclick="ResetCanvas()" />
-                        <span class="mc-ts-slider round">
-                        </span>
-                        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Animated</div>
-                        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Not Animated</div>
-                    </label>
-                    <label class="mc-toggle-switch">
-                        <input class="mc-ts-check" type="checkbox" id="chkParallaxRtl" onclick="ResetCanvas()" />
-                        <span class="mc-ts-slider round">
-                        </span>
-                        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Right to Left</div>
-                        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Left to Right</div>
-                    </label>
-                    <label class="mc-toggle-switch">
-                        <input class="mc-ts-check" type="checkbox" id="chkParallaxVertical" onclick="ResetCanvas()" />
-                        <span class="mc-ts-slider round">
-                        </span>
-                        <div class='mc-ts-toggle-title mc-ts-toggle-title-yes'>Vertical</div>
-                        <div class='mc-ts-toggle-title mc-ts-toggle-title-no'>Horizontal</div>
-                    </label>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">Speed:</span>
                         <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numkParallaxSpeed" value="2" onchange="ResetCanvas()" />
                     </div>
+                </td>
+                <td></td>
+                <td>
                     <div class="input-group input-group-sm" title="Parallax Complement X">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
                         <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxX" value="0" lazyblur="ResetCanvas()" />
                     </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
                     <div class="input-group input-group-sm" title="Parallax Complement Y">
                         <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
                         <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxY" value="0" lazyblur="ResetCanvas()" />
                     </div>
-                    <div class="input-group input-group-sm" title="Global Show">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Global Show:</span>
+                </td>
+                <td></td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
                         <div class="form-control input-sm">
-                            <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" oninput="ResetCanvas()" />
+                            <input type="range" min="0" max="1" step="0.1" id="numParallaxOp" value="1" oninput="ResetCanvas()" />
                         </div>
                     </div>
                 </td>

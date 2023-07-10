@@ -43,7 +43,7 @@
         return { x: posX, y: posY };
     }
 
-    draw(ctx) {
+    draw(ctx, modX, modY) {
         if (!this.visible) return;
         if (this.showOverlay) {
             ctx.save();
@@ -55,7 +55,7 @@
         ctx.save();
         ctx.globalAlpha = this.transp;
         var pos = this.calcFlip(ctx, this.w, this.h);
-        ctx.drawImage(this.img, (this.x + pos.x), (this.y + pos.y), this.w, this.h);
+        ctx.drawImage(this.img, modX + (this.x + pos.x), modY + (this.y + pos.y), this.w, this.h);
         ctx.restore();
     }
 }
@@ -125,6 +125,7 @@ class ParallaxBackground {
             ctx.translate(directionX, 0);
         }
 
+        ctx.globalAlpha = parallaxOp;
         for (var i = 0; i < this.slideImages; i++) {
             if (parallaxVertical) {
                 ctx.drawImage(this.img, parallaxX, (i * this.img.height) + parallaxY);
@@ -132,11 +133,6 @@ class ParallaxBackground {
                 ctx.drawImage(this.img, (i * this.img.width) + parallaxX, parallaxY);
             }
         }
-        /*
-        //Escurecer o Parallax
-        ctx.fillStyle = `rgba(0, 0, 0, ${currentDarken})`;
-        ctx.fillRect(0, 0, canvasObj.width, canvasObj.height);
-        */
         ctx.restore();
     }
 }
@@ -145,7 +141,12 @@ class MapReveal {
     constructor() {
         this.name = "";
         this.visible = true;
+        this.proportion = 96; //Será usado para calcular a mudança do Box Size
         this.steps = [];
+    }
+
+    get Proportion() {
+        return this.proportion ?? 96;
     }
 
     translateSteps() {
