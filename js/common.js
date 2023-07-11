@@ -1,4 +1,5 @@
 ﻿const FileOptions = { types: [{ description: "Json Files", accept: { "application/json": [".json"] } }] };
+const ImageOptions = { types: [{ description: "Image Files", accept: { 'image/*': ['.png', '.gif', '.jpeg', '.jpg'] } }] };
 
 var Keys = {
     Up: 38,
@@ -74,6 +75,17 @@ const OpenFile = async () => {
     }
 };
 
+const OpenImageFile = async (callback) => {
+    try {
+        var [fileHandle] = await window.showOpenFilePicker(ImageOptions);
+        var file = await fileHandle.getFile();
+        callback(file);
+    } catch (err) {
+        console.log(err.name, err.message);
+        return null;
+    }
+};
+
 const SaveFile = async (blob) => {
     try {
         if (LastOpenedHandle == null) {
@@ -89,16 +101,45 @@ const SaveFile = async (blob) => {
 };
 
 function ConfigureWindowMessage() {
-    window.addEventListener("message", (event) => {
-        var model = { cmd: "", parameters: [] };
+    window.addEventListener("unload", (event) => {
         debugger;
+        if (settingsWindow) settingsWindow.close();
+    });
+
+    window.addEventListener("message", (event) => {
+        var objParameters = event.data;
+        setTimeout(() => {
+            var attrs = objParameters.attrs;
+            var objData = objParameters.parameters;
+            var cmd = objParameters.cmd;
+            switch (cmd) {
+                case "ResetCanvas":
+                    window.ResetCanvas();
+                    break;
+
+                case "LoadBackground":
+                    currentImg.onload = function () { ResetCanvas(); }
+                    currentImg.src = URL.createObjectURL(objParameters.file);
+                    break;
+
+                case "LoadParallax":
+                    parallaxBack = new ParallaxBackground();
+                    parallaxBack.initialize(URL.createObjectURL(objParameters.file), ResetCanvas);
+                    ResetCanvas();
+                    break;
+            }
+        }, 100);
+        return true;
     }, false);
 }
 
 function ShowSettingsWindow() {
-    //var left = canvasObj.width - 580;
-    //var top = 150;
-    //window.open("settings.html", "settings", `width=500,height=300,left=${left},top=145`);
+    ShowHideObjectPanel(true);
+    ShowHideLayerPanel(true);
+    ShowHideMapRevealPanel(true);
+    var left = (canvasObj.width - 580);
+    var top = 150;
+    settingsWindow = window.open("settings.html", "settings", `width=500,height=300,left=${left},top=${top}`);
 }
 
 function ShowHideLayerPanel(forceHide) {
@@ -260,6 +301,10 @@ function AddListItem(controle, texto, valor) {
 }
 
 function LoadImage(callback) {
+    if (HasOpenFilePicker()) {
+        OpenImageFile(callback);
+        return;
+    }
     $("#uploadFile").unbind("change").change(function (e) {
         var file = e.currentTarget.files[0];
         callback(file);
@@ -288,7 +333,7 @@ function ConfigureCanvas() {
     canvasCtx = canvasObj.getContext("2d");
     canvasCtx.canvas.width = window.innerWidth;
     canvasCtx.canvas.height = window.innerHeight;
-
+    ConfigureWindowMessage();
     canvasObj.addEventListener("contextmenu", (e) => {
         e.preventDefault();
         return false;
@@ -894,4 +939,23 @@ function CreateButton(title, caption, icon, cssclass, style, onclick) {
     hvStyle = style ? `style="${style}"` : "";
     return `<a class="btn btn-default ${cssclass}" ${hvStyle} onclick="${onclick}" title="${title}">
         <i class="glyphicon glyphicon-${icon}"></i>${hvCaption}</a>`;
+}
+
+function CreateToggles() {
+    //Reveal Items
+    CreateToggle("chkShowMapRevealNames", "tdShowMapRevealNames", false, "ResetCanvas()", "Hide Names", "Show Names");
+    CreateToggle("chkShowAllMapReveal", "tdShowAllMapReveal", true, "ResetCanvas()", "Hide All", "Show All");
+    //Layers
+    CreateToggle("chkShowAllLayer", "tdShowAllLayer", true, "UpdateSelectedLayer()", "Hide All", "Show All");
+    CreateToggle("chkShowLayerOverlay", "tdShowLayerOverlay", false, "UpdateSelectedLayer()", "Hide Overlay", "Show Overlay");
+    CreateToggle("chkShowLayer", "tdShowLayer", true, "UpdateSelectedLayer()", "Hide Layer", "Show Layer");
+    //Settings
+    CreateToggle("chkShowGrid", "divShowGrid", true, "ResetCanvas()", "Hide Grid", "Show Grid");
+    CreateToggle("chkHorizontal", "divHorizontal", false, "ResetCanvas()", "Backgrnd Original", "Backgrnd Rotated");
+    CreateToggle("chkShowCoords", "divShowCoords", false, "ResetCanvas()", "Hide Coordinates", "Show Coordinates");
+    //Parallax
+    CreateToggle("chkParallaxAnim", "divParallaxAnim", true, "ResetCanvas()", "Not Animated", "Animated");
+    CreateToggle("chkParallaxRtl", "divParallaxRtl", false, "ResetCanvas()", "Left to Right", "Right to Left");
+    CreateToggle("chkParallaxVertical", "divParallaxVertical", false, "ResetCanvas()", "Horizontal", "Vertical");
+    CreateToggle("chkParallaxStretch", "divParallaxStretch", false, "ResetCanvas()", "Resize To Fit", "Default");
 }

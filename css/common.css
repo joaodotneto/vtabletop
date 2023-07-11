@@ -58,7 +58,7 @@
 
 .object-panel {
     position: absolute;
-    z-index: 1000;
+    z-index: 1;
     width: 200px;
     background: #ccc;
     top: 41px;
@@ -261,3 +261,36 @@
     </label>
 */
 /* ######################################## */
+
+.btn-sm-adj {
+    height: 34px;
+}
+
+.mc-toggle-switch {
+    width: 170px;
+}
+
+.mc-ts-check:checked + .mc-ts-slider:before {
+    -webkit-transform: translateX(136px);
+    -ms-transform: translateX(136px);
+    transform: translateX(136px);
+}
+
+.layer-panel, .map-reveal-panel, .object-panel {
+    width: 370px;
+}
+
+.alert-map-reveal {
+    position: absolute;
+    z-index: 1;
+    top: 42px;
+    right: 440px;
+    user-select: none;
+    cursor: pointer;
+}
+
+body {
+    background-color: #fff;
+    margin: 0;
+    padding: 0;
+}

@@ -7,6 +7,11 @@ Simple Virtual TableTop Display - [Demo Here](https://stingray-app-bkd5f.ondigit
 - Box Sizes (With Defaults);
 - Save / Load Config Files (AKA Projects);
 
+Update (10/07/2023):
+- Commands grouped as Menu;
+- External Control Panel - WIP;
+- Code review;
+
 Update (08/07/2023):
 - Layers enhanced;
 - Map Reveal Items implemented;

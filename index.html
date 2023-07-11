@@ -19,33 +19,6 @@
             }
         }
 
-        .btn-sm-adj {
-            height: 34px;
-        }
-
-        .mc-toggle-switch {
-            width: 170px;
-        }
-
-        .mc-ts-check:checked + .mc-ts-slider:before {
-            -webkit-transform: translateX(136px);
-            -ms-transform: translateX(136px);
-            transform: translateX(136px);
-        }
-
-        .layer-panel, .map-reveal-panel, .object-panel {
-            width: 370px;
-        }
-
-        .alert-map-reveal {
-            position: absolute;
-            z-index: 1000;
-            top: 42px;
-            right: 440px;
-            user-select: none;
-            cursor: pointer;
-        }
-
         body {
             background-color: #ddd;
             margin: 0;
@@ -74,25 +47,6 @@
             ConfigureCanvas();
             ResetCanvas();
         });
-
-        function CreateToggles() {
-            //Reveal Items
-            CreateToggle("chkShowMapRevealNames", "tdShowMapRevealNames", false, "ResetCanvas()", "Hide Names", "Show Names");
-            CreateToggle("chkShowAllMapReveal", "tdShowAllMapReveal", true, "ResetCanvas()", "Hide All", "Show All");
-            //Layers
-            CreateToggle("chkShowAllLayer", "tdShowAllLayer", true, "UpdateSelectedLayer()", "Hide All", "Show All");
-            CreateToggle("chkShowLayerOverlay", "tdShowLayerOverlay", false, "UpdateSelectedLayer()", "Hide Overlay", "Show Overlay");
-            CreateToggle("chkShowLayer", "tdShowLayer", true, "UpdateSelectedLayer()", "Hide Layer", "Show Layer");
-            //Settings
-            CreateToggle("chkShowGrid", "divShowGrid", true, "ResetCanvas()", "Hide Grid", "Show Grid");
-            CreateToggle("chkHorizontal", "divHorizontal", false, "ResetCanvas()", "Backgrnd Original", "Backgrnd Rotated");
-            CreateToggle("chkShowCoords", "divShowCoords", false, "ResetCanvas()", "Hide Coordinates", "Show Coordinates");
-            //Parallax
-            CreateToggle("chkParallaxAnim", "divParallaxAnim", true, "ResetCanvas()", "Not Animated", "Animated");
-            CreateToggle("chkParallaxRtl", "divParallaxRtl", false, "ResetCanvas()", "Left to Right", "Right to Left");
-            CreateToggle("chkParallaxVertical", "divParallaxVertical", false, "ResetCanvas()", "Horizontal", "Vertical");
-            CreateToggle("chkParallaxStretch", "divParallaxStretch", false, "ResetCanvas()", "Resize To Fit", "Default");
-        }
 
         function ResetCanvas() {
             requestAnimationFrame(ResetCanvas);
@@ -280,19 +234,19 @@
                     break;
 
                 case 8: //Up
-                    ExecuteMove(Keys.Up, false, rott);
+                    ExecuteMove(Keys.Up, false, true, rott);
                     ResetCanvas();
                     break;
                 case 9: //Down
-                    ExecuteMove(Keys.Down, false, rott);
+                    ExecuteMove(Keys.Down, false, true, rott);
                     ResetCanvas();
                     break;
                 case 10: //Left
-                    ExecuteMove(Keys.Left, false, rott);
+                    ExecuteMove(Keys.Left, false, true, rott);
                     ResetCanvas();
                     break;
                 case 11: //Right
-                    ExecuteMove(Keys.Right, false, rott);
+                    ExecuteMove(Keys.Right, false, true, rott);
                     ResetCanvas();
                     break;
 
@@ -328,23 +282,26 @@
                     <div class="app-title">Deploy Games Simple Virtual TableTop</div>
                 </td>
                 <td style="width: 8px">&nbsp;</td>
-                <td style="width: 258px">
+                <td style="width: 158px">
                     <div class="input-group input-group-sm">
                         <div class="input-group-btn">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="glyphicon glyphicon-cog"></i>&nbsp;Settings&nbsp;<span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" style="min-width: 50px !important;z-index: 2000">
+                                    <li><a onclick="ExecuteCommand(12)"><i class="glyphicon glyphicon-cog"></i>&nbsp;Settings</a></li>
+                                    <li><a onclick="ExecuteCommand(13)"><i class="glyphicon glyphicon-list-alt"></i>&nbsp;Layers</a></li>
+                                    <li><a onclick="ExecuteCommand(14)"><i class="glyphicon glyphicon-eye-close"></i>&nbsp;Map Reveals</a></li>
+                                    <li><a onclick="ExecuteCommand(15)"><i class="glyphicon glyphicon-film"></i>&nbsp;Animations</a></li>
+                                    <li><a onclick="ShowSettingsWindow()"><i class="glyphicon glyphicon-th"></i>&nbsp;Control Panel</a></li>
+                                </ul>
+                            </div>
                             <a class="btn btn-default" onclick="WriteSettings()" title="Save Settings">
                                 <i class="glyphicon glyphicon-save"></i>&nbsp;Save
                             </a>
                             <a class="btn btn-default" onclick="ReadSettings()" title="Load Settings">
                                 <i class="glyphicon glyphicon-open"></i>&nbsp;Open
-                            </a>
-                            <a class="btn btn-default" onclick="ExecuteCommand(12)" title="Settings">
-                                <i class="glyphicon glyphicon-cog"></i>&nbsp;Settings
-                            </a>
-                            <a class="btn btn-default" onclick="ExecuteCommand(13)" title="Layers">
-                                <i class="glyphicon glyphicon-list-alt"></i>&nbsp;Layers
-                            </a>
-                            <a class="btn btn-default" onclick="ExecuteCommand(14)" title="Map Reveal">
-                                <i class="glyphicon glyphicon-eye-close"></i>&nbsp;Map Reveal
                             </a>
                         </div>
                     </div>
