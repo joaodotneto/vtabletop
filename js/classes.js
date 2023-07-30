@@ -1,4 +1,13 @@
-﻿class ImageLayer {
+﻿class AnimationEvent {
+    constructor() {
+        this.type = "";
+        this.isParallel = false;
+        this.parameters = [];
+        this.executed = false;
+    }
+}
+
+class ImageLayer {
     constructor() {
         this.name = "";
         this.index = 0;

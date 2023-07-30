@@ -26,89 +26,136 @@
                 } else if (val < min) {
                     self.val(min);
                 }
-                try {
-                    eval(self.attr("lazyblur"));
-                } catch (e) {
-                    console.log(e);
-                }
             });
-            CreateToggles();
+            CreateToggle("chkShowGrid", "divShowGrid", true, "GetSettingsAndSend()", "Hide Grid", "Show Grid");
+            CreateToggle("chkShowCoords", "divShowCoords", false, "GetSettingsAndSend()", "Hide Coordinates", "Show Coordinates");
+            CreateToggle("chkParallaxAnim", "divParallaxAnim", true, "GetSettingsAndSend()", "Par. Not Animated", "Par. Animated");
+            CreateToggle("chkShowAllLayer", "divShowAllLayer", true, "GetSettingsAndSend()", "Hide All Layers", "Show All Layers");
+            CreateToggle("chkShowMapRevealNames", "divShowMapRevealNames", false, "GetSettingsAndSend()", "Hide Rev. Names", "Show Rev. Names");
+            CreateToggle("chkShowAllMapReveal", "divShowAllMapReveal", true, "GetSettingsAndSend()", "Hide All Rev.", "Show All Rev.");
+
+            window.addEventListener("message", (event) => {
+                var objParameters = event.data;
+                setTimeout(() => {
+                    var attrs = objParameters.attrs;
+                    var cmd = objParameters.cmd;
+                    switch (cmd) {
+                        case "LoadSettings":
+                            SetLocalSettings(attrs[0]);
+                            break;
+                    }
+                }, 100);
+                return true;
+            }, false);
         });
+
+        function SetLayer(idx, chkLayer, chkOverlay) {
+            SendToParent("UpdateLayer", [idx, chkVal(chkLayer), chkVal(chkOverlay)]);
+        }
+
+        function SetReveal(idx, chk) {
+            SendToParent("UpdateReveal", [idx, chkVal(chk)]);
+        }
+
+        function SetLocalSettings(objInp) {
+            $("#numGlobalShow").val(objInp.Fog ?? 0.0);
+            $("#chkShowGrid").prop("checked", objInp.G);
+            $("#chkShowCoords").prop("checked", (objInp.Coords ?? false));
+            if (objInp.Parallax) {
+                var objP = objInp.Parallax;
+                $("#chkParallaxAnim").prop("checked", objP.Anim);
+            }
+
+            if (objInp.Layers) {
+                var tbHtml = ``;
+                objInp.Layers.forEach((obj, idx) => {
+                    tbHtml += `<tr>
+                        <td style="padding-left: 5px;font-weight: bold">${obj.name}</td>
+                        <td style="text-align: center;"><input type="checkbox" ${(obj.visible ? "checked" : "")}
+                            id="chkShowLayer${idx}" onclick="SetLayer('${idx}', 'chkShowLayer${idx}', 'chkShowOVerlay${idx}')" /></td>
+                        <td style="text-align: center;"><input type="checkbox" ${(obj.showOverlay ? "checked" : "")}
+                            id="chkShowOVerlay${idx}" onclick="SetLayer('${idx}', 'chkShowLayer${idx}', 'chkShowOVerlay${idx}')" /></td>
+                    </tr>`;
+                });
+                $("#tbLayers").html(tbHtml);
+            }
+
+            if (objInp.Reveals) {
+                var tbHtml = ``;
+                objInp.Reveals.forEach((obj, idx) => {
+                    tbHtml += `<tr>
+                        <td style="padding-left: 5px;font-weight: bold">${obj.name}</td>
+                        <td style="text-align: center;"><input type="checkbox" ${(obj.visible ? "checked" : "")}
+                            id="chkReveal${idx}" onclick="SetReveal('${idx}', 'chkReveal${idx}')" /></td>
+                    </tr>`;
+                });
+                $("#tbReveals").html(tbHtml);
+            }
+        }
 
         function GetSettingsData() {
             return {
-                Box: getInt("numBox"),
-                X: getInt("numCompX"),
-                Y: getInt("numCompY"),
-                Z: getFloat("numCompZ"),
-                R: chkVal("chkHorizontal"),
                 G: chkVal("chkShowGrid"),
                 Coords: chkVal("chkShowCoords"),
-                PX: 0,
-                PY: 0,
-                Color: $("#numColor").val(),
-                BackColor: $("#numColorBk").val(),
-                //Layers: JSON.stringify(parsedLayers),
-                RevealColor: $("#numColorMapReveal").val(),
-                //Reveals: JSON.stringify(currentRevealList),
+                ShowLayers: chkVal("chkShowAllLayer"),
+                ShowRevNames: chkVal("chkShowMapRevealNames"),
+                ShowReveals: chkVal("chkShowAllMapReveal"),
                 Parallax: {
-                    Anim: chkVal("chkParallaxAnim"),
-                    Dir: chkVal("chkParallaxRtl"),
-                    Ver: chkVal("chkParallaxVertical"),
-                    Spd: getFloat("numkParallaxSpeed", 1.0),
-                    X: getInt("numParallaxX"),
-                    Y: getInt("numParallaxY"),
-                    Opacity: getFloat("numParallaxOp")
+                    Anim: chkVal("chkParallaxAnim")
                 }
             };
+        }
+
+        function GetSettingsAndSend() {
+            var objData = GetSettingsData();
+            SendToParent("UpdateInfo", [objData]);
         }
 
         function SendToParent(command, attributes) {
             var objSend = {
                 cmd: command,
-                attrs: attributes,
-                parameters: GetSettingsData()
+                attrs: attributes
             };
             window.opener.postMessage(objSend);
         }
 
-        function ResetCanvas() {
-            SendToParent("ResetCanvas", null);
+        var currInterval = null;
+        var currCmdShow = false;
+        var startShowVal = 0.0;
+        function ExecuteShowMap(show) {
+            var stsVal = getFloat("numGlobalShow");
+            var timVal = getFloat("numGlobalShowStep");
+            currCmdShow = show;
+            startShowVal = stsVal;
+            currInterval = setInterval(() => {
+                startShowVal = currCmdShow ? Math.max(0, startShowVal - 0.1) : Math.min(1, startShowVal + 0.1);
+                console.log(startShowVal);
+                $("#numGlobalShow").val(startShowVal);
+                SendToParent("ChangeFog", [startShowVal]);
+                var indFinish = currCmdShow ? 0 : 1;
+                if (startShowVal == indFinish) {
+                    clearInterval(currInterval);
+                }
+            }, timVal * 100);
         }
 
-        function LoadBackground() {
-            LoadImage((file) => {
-                var objSend = {
-                    cmd: "LoadBackground",
-                    file: file
-                };
-                window.opener.postMessage(objSend);
-            });
-        }
-
-        function LoadParallax() {
-            LoadImage((file) => {
-                var objSend = {
-                    cmd: "LoadParallax",
-                    file: file
-                };
-                window.opener.postMessage(objSend);
-            });
-        }
-
-        function ResetAdjusts() {
-            parent.ResetAdjusts();
-        }
-
-        function SetBoxValue(value) {
-            parent.SetBoxValue(value);
-        }
-
-        function SetCanvasZoom() {
-            //TODO: Propagar valores dos controles
-            parent.SetCanvasZoom();
+        function ReadSettings() {
+            if (HasOpenFilePicker()) {
+                OpenJsonFile((result) => {
+                    SendToParent("OpenFile", [result]);
+                });
+                return;
+            }
+            alert("Open File Unavailable");
         }
     </script>
+    <style type="text/css">
+        .reveal-panel {
+            width: 100%;
+            height: calc(100vh - 55px);
+            overflow-y: scroll;
+        }
+    </style>
 </head>
 <body>
     <div>
@@ -122,158 +169,87 @@
             <div role="tabpanel" class="tab-pane active" id="home" style="padding: 8px">
                 <table style="width: 100%;">
                     <tr>
-                        <td style="width: 50%">
-                            <div class="input-group input-group-sm" title="Global Show" style="margin-bottom: 3px">
-                                <span class="input-group-addon addon-74p" style="font-weight: bold">Fog:</span>
-                                <div class="form-control input-sm">
-                                    <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" oninput="ResetCanvas()" />
+                        <td style="width: 50px;vertical-align: top">
+                            <div class="input-group input-group-sm">
+                                <div class="input-group-btn">
+                                    <a class="btn btn-default" onclick="ReadSettings()" title="Load Settings">
+                                        <i class="glyphicon glyphicon-open"></i>&nbsp;Open
+                                    </a>
                                 </div>
                             </div>
                         </td>
                         <td style="width: 8px">&nbsp;</td>
                         <td>
-                            <div id="divShowGrid"></div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="input-group input-group-sm" style="margin-bottom: 3px">
-                                <div class="input-group-btn">
-                                    <a class="btn btn-default" onclick="LoadBackground()" title="Background">
-                                        <i class="glyphicon glyphicon-picture"></i>&nbsp;Background
-                                    </a>
-                                    <a class="btn btn-default" onclick="LoadParallax()" title="Parallax">
-                                        <i class="glyphicon glyphicon-picture"></i>&nbsp;Parallax
-                                    </a>
-                                </div>
-                            </div>
-                        </td>
-                        <td></td>
-                        <td>
-                            <div id="divHorizontal"></div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="input-group input-group-sm" style="margin-bottom: 5px">
-                                <div class="input-group-btn">
-                                    <a class="btn btn-default" style="width: 100%" onclick="ResetAdjusts()" title="Reset">
-                                        <i class="glyphicon glyphicon-refresh"></i>&nbsp;Reset Settings
-                                    </a>
-                                </div>
-                            </div>
-                        </td>
-                        <td></td>
-                        <td>
-                            <div id="divShowCoords"></div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="input-group input-group-sm" title="Background Color">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">BC:</span>
-                                <input type="color" class="form-control input-sm" id="numColorBk" value="#000000" oninput="ResetCanvas()" />
-                            </div>
-                        </td>
-                        <td></td>
-                        <td>
-                            <div class="input-group input-group-sm" title="Grid Color">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">GC:</span>
-                                <input type="color" class="form-control input-sm" id="numColor" value="#ff0000" oninput="ResetCanvas()" />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">Box:</span>
-                                <input type="number" class="form-control input-sm" min="48" max="128" step="1" id="numBox" value="96" lazyblur="ResetCanvas()" />
-                                <div class="input-group-btn">
-                                    <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></button>
-                                    <ul class="dropdown-menu" style="min-width: 50px !important;">
-                                        <li><a onclick="SetBoxValue('48')">48</a></li>
-                                        <li><a onclick="SetBoxValue('72')">72</a></li>
-                                        <li><a onclick="SetBoxValue('96')">96</a></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </td>
-                        <td></td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">Zoom:</span>
-                                <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numCompZ" value="1" onchange="SetCanvasZoom()" pattern="^\d*(\.\d{0,2})?$" />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="input-group input-group-sm" title="Background Complement X">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
-                                <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompX" value="0" lazyblur="ResetCanvas()" />
-                            </div>
-                        </td>
-                        <td></td>
-                        <td>
-                            <div class="input-group input-group-sm" title="Background Complement Y">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
-                                <input type="number" class="form-control input-sm" min="-100" max="100" id="numCompY" value="0" lazyblur="ResetCanvas()" />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td colspan="3">
-                            <div style="margin-top: 8px"></div>
-                            <label class="lbl-header">Parallax Settings</label>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td><div id="divParallaxAnim"></div></td>
-                        <td></td>
-                        <td><div id="divParallaxRtl"></div></td>
-                    </tr>
-                    <tr>
-                        <td><div id="divParallaxVertical"></div></td>
-                        <td></td>
-                        <td><div id="divParallaxStretch"></div></td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">Speed:</span>
-                                <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numkParallaxSpeed" value="2" onchange="ResetCanvas()" />
-                            </div>
-                        </td>
-                        <td></td>
-                        <td>
-                            <div class="input-group input-group-sm" title="Parallax Complement X">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
-                                <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxX" value="0" lazyblur="ResetCanvas()" />
-                            </div>
-                        </td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <div class="input-group input-group-sm" title="Parallax Complement Y">
-                                <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
-                                <input type="number" class="form-control input-sm" min="-100" max="100" id="numParallaxY" value="0" lazyblur="ResetCanvas()" />
-                            </div>
-                        </td>
-                        <td></td>
-                        <td>
-                            <div class="input-group input-group-sm">
-                                <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
+                            <div class="input-group input-group-sm" title="Global Show" style="margin-bottom: 3px">
+                                <span class="input-group-addon" style="font-weight: bold">Fog:</span>
                                 <div class="form-control input-sm">
-                                    <input type="range" min="0" max="1" step="0.1" id="numParallaxOp" value="1" oninput="ResetCanvas()" />
+                                    <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" />
                                 </div>
+                                <div class="input-group-btn">
+                                    <a class="btn btn-default" onclick="ExecuteShowMap(true)" title="Show Map">
+                                        <i class="glyphicon glyphicon-triangle-left"></i>
+                                    </a>
+                                    <a class="btn btn-default" onclick="ExecuteShowMap(false)" title="Hide Map">
+                                        <i class="glyphicon glyphicon-triangle-right"></i>
+                                    </a>
+                                </div>
+                                <span class="input-group-addon" style="font-weight: bold">Amt:</span>
+                                <input type="number" class="form-control input-sm" min="0" max="3" step="0.01" id="numGlobalShowStep" value="0.5" />
                             </div>
                         </td>
                     </tr>
                 </table>
+                <table style="width: 100%">
+                    <tr>
+                        <td style="width: 175px">
+                            <div id="divShowGrid"></div>
+                        </td>
+                        <td style="width: 175px">
+                            <div id="divShowCoords"></div>
+                        </td>
+                        <td>
+                            <div id="divParallaxAnim"></div>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td><div id="divShowAllLayer"></div></td>
+                        <td><div id="divShowMapRevealNames"></div></td>
+                        <td><div id="divShowAllMapReveal"></div></td>
+                    </tr>
+                </table>
             </div>
-            <div role="tabpanel" class="tab-pane" id="profile">...</div>
-            <div role="tabpanel" class="tab-pane" id="messages">...</div>
-            <div role="tabpanel" class="tab-pane" id="settings">...</div>
+            <div role="tabpanel" class="tab-pane" id="profile">
+                <div class="reveal-panel">
+                    <table style="width: calc(100% - 10px);margin: 5px 0 0  5px" border="1">
+                        <thead>
+                            <tr>
+                                <th style="padding-left: 5px">Layer</th>
+                                <th style="width: 65px; text-align: center">Show</th>
+                                <th style="width: 65px;text-align: center">Overlay</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbLayers"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="messages">
+                <div class="reveal-panel">
+                    <table style="width: calc(100% - 10px);margin: 5px 0 0  5px" border="1">
+                        <thead>
+                            <tr>
+                                <th style="padding-left: 5px">Reveal</th>
+                                <th style="width: 65px; text-align: center">Show</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbReveals"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div role="tabpanel" class="tab-pane" id="settings">
+                <div class="reveal-panel">
+
+                </div>
+            </div>
         </div>
     </div>
 </body>

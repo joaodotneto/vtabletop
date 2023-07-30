@@ -38,6 +38,20 @@ var cameraZoom = 1.0;
 var layers = [];
 var currentLayerEdit = null;
 var currentSelectedRevealItem = null;
+var deltaTime = 0.0;
+var DeltaSeconds = 0.0;
+
+var InMoveX = false;
+var InMoveY = false;
+var MoveXYSpeed = 0.2;
+var MoveXYLastTime = 0;
+var MoveXAmmount = 0;
+var MoveYAmmount = 0;
+var MoveXPosition = 0.0;
+var MoveYPosition = 0.0;
+var MoveXYSpeedMultiplier = 10.0;
+var MoveXDirection = 1;
+var MoveYDirection = 1;
 
 //Escurecimento da tela
 var currentDarken = 0;
@@ -59,14 +73,14 @@ var createMapRevealEnabled = false;
 var currentRevealList = [];
 var currentRevealSteps = [];
 
-const OpenFile = async () => {
+const OpenJsonFile = async (callback) => {
     try {
         [LastOpenedHandle] = await window.showOpenFilePicker(FileOptions);
         var file = await LastOpenedHandle.getFile();
         lastSelectedFileName = file.name.replace(".json", "");
         var reader = new FileReader();
         reader.onload = function () {
-            ParseAndApplySettings(reader.result);
+            callback(reader.result);
         };
         reader.readAsText(file);
     } catch (err) {
@@ -100,9 +114,30 @@ const SaveFile = async (blob) => {
     }
 };
 
+function SetLocalSettings(objInp) {
+    $("#numGlobalShow").val(objInp.Fog ?? 0.0);
+    $("#chkShowGrid").prop("checked", objInp.G);
+    $("#chkShowCoords").prop("checked", (objInp.Coords ?? false));
+    $("#chkShowAllLayer").prop("checked", (objInp.ShowLayers ?? true));
+    $("#chkShowMapRevealNames").prop("checked", (objInp.ShowRevNames ?? false));
+    $("#chkShowAllMapReveal").prop("checked", (objInp.ShowReveals ?? true));
+
+    if (objInp.Parallax) {
+        var objP = objInp.Parallax;
+        $("#chkParallaxAnim").prop("checked", objP.Anim);
+    }
+
+    if (objInp.Layers) {
+
+    }
+
+    if (objInp.Reveals) {
+
+    }
+}
+
 function ConfigureWindowMessage() {
     window.addEventListener("unload", (event) => {
-        debugger;
         if (settingsWindow) settingsWindow.close();
     });
 
@@ -113,6 +148,35 @@ function ConfigureWindowMessage() {
             var objData = objParameters.parameters;
             var cmd = objParameters.cmd;
             switch (cmd) {
+                case "ChangeFog":
+                    $("#numGlobalShow").val(attrs[0]);
+                    break;
+
+                case "OpenFile":
+                    ParseAndApplySettings(attrs[0]);
+                    break;
+
+                case "UpdateInfo":
+                    SetLocalSettings(attrs[0]);
+                    break;
+
+                case "UpdateReveal":
+                    var idx = attrs[0];
+                    var val = attrs[1];
+                    currentRevealList[idx].visible = val;
+                    RefreshMapRevealList();
+                    break;
+
+                case "UpdateLayer":
+                    var idx = attrs[0];
+                    var val = attrs[1];
+                    var ovl = attrs[2];
+                    var objLayer = layers[idx];
+                    objLayer.visible = val;
+                    objLayer.showOverlay = ovl;
+                    RefreshLayerList();
+                    break;
+
                 case "ResetCanvas":
                     window.ResetCanvas();
                     break;
@@ -133,13 +197,23 @@ function ConfigureWindowMessage() {
     }, false);
 }
 
+function InvokeConfigOnSettingsWindow(command, attributes) {
+    var objSend = {
+        cmd: command,
+        attrs: attributes
+    };
+    if (settingsWindow) settingsWindow.postMessage(objSend);
+}
+
 function ShowSettingsWindow() {
     ShowHideObjectPanel(true);
     ShowHideLayerPanel(true);
     ShowHideMapRevealPanel(true);
-    var left = (canvasObj.width - 580);
+    var left = (canvasObj.width - 620);
     var top = 150;
-    settingsWindow = window.open("settings.html", "settings", `width=500,height=300,left=${left},top=${top}`);
+    
+    settingsWindow = window.open("settings.html", "settings",
+        `toolbar=no,location=no,status=no,menubar=no,scrollbars=yes,resizable=no,width=540,height=300,left=${left},top=${top}`);
 }
 
 function ShowHideLayerPanel(forceHide) {
@@ -177,7 +251,6 @@ function AddValueToField(field, value, convertFunc) {
 
 function SetBoxValue(value) {
     $("#numBox").val(value);
-    ResetCanvas();
 }
 
 function hexToRgb(hex) {
@@ -315,7 +388,6 @@ function LoadImage(callback) {
 
 function LoadBackground() {
     LoadImage((file) => {
-        currentImg.onload = function () { ResetCanvas(); }
         currentImg.src = URL.createObjectURL(file);
     });
 }
@@ -323,8 +395,7 @@ function LoadBackground() {
 function LoadParallax() {
     LoadImage((file) => {
         parallaxBack = new ParallaxBackground();
-        parallaxBack.initialize(URL.createObjectURL(file), ResetCanvas);
-        ResetCanvas();
+        parallaxBack.initialize(URL.createObjectURL(file), () => { });
     });
 }
 
@@ -426,7 +497,6 @@ function ConfigureCanvas() {
                 numCompX.val(valX);
                 numCompY.val(valY);
             }
-            ResetCanvas();
             e.preventDefault();
         }
     });
@@ -468,7 +538,6 @@ function SetCanvasZoom() {
     var diffZoom = lastValueZoom > newZoom ? -0.01 : 0.01;
     lastValueZoom = newZoom;
     AdjustZoom(diffZoom);
-    ResetCanvas();
 }
 
 function ResetAdjusts() {
@@ -481,7 +550,6 @@ function ResetAdjusts() {
     currentX = 0;
     currentY = 0;
     canvasCtx.setTransform(1, 0, 0, 1, 0, 0);
-    ResetCanvas();
 }
 
 function CloneClassInstance(model, instance) {
@@ -505,6 +573,7 @@ function WriteSettings() {
         Coords: chkVal("chkShowCoords"),
         PX: currentX,
         PY: currentY,
+        Fog: getFloat("numGlobalShow"),
         Color: $("#numColor").val(),
         BackColor: $("#numColorBk").val(),
         Image: GetImageAsBase64(currentImg),
@@ -539,7 +608,7 @@ function WriteSettings() {
 
 function ReadSettings() {
     if (HasOpenFilePicker()) {
-        OpenFile();
+        OpenJsonFile(ParseAndApplySettings);
         return;
     }
     $("#uploadSettings").unbind("change").change(function (e) {
@@ -566,6 +635,7 @@ function ParseAndApplySettings(result) {
     $("#numCompY").val(objInp.Y);
     $("#numCompZ").val(objInp.Z);
     $("#numColor").val(objInp.Color);
+    $("#numGlobalShow").val(objInp.Fog ?? 0.0);
     $("#numColorBk").val(objInp.BackColor ?? "#000000");
     $("#numColorMapReveal").val(objInp.RevealColor ?? "#ffffff"),
     $("#chkHorizontal").prop("checked", objInp.R);
@@ -588,7 +658,7 @@ function ParseAndApplySettings(result) {
     }
 
     if (objInp.Layers) {
-        var lstLayers = JSON.parse(objInp.Layers);
+        var lstLayers = objInp.Layers = JSON.parse(objInp.Layers);
         layers = [];
         var model = new ImageLayer();
         lstLayers.forEach((obj) => {
@@ -600,7 +670,7 @@ function ParseAndApplySettings(result) {
     }
 
     if (objInp.Reveals) {
-        var lstReveals = JSON.parse(objInp.Reveals);
+        var lstReveals = objInp.Reveals = JSON.parse(objInp.Reveals);
         currentRevealList = [];
         var model = new MapReveal();
         lstReveals.forEach((obj) => {
@@ -611,7 +681,7 @@ function ParseAndApplySettings(result) {
     }
 
     currentImg.onload = function () {
-        ResetCanvas();
+        InvokeConfigOnSettingsWindow("LoadSettings", [objInp]);
     }
     currentImg.src = objInp.Image;
 }
@@ -621,10 +691,7 @@ function RenderParallax() {
         if (parallaxBack) parallaxBack.draw(canvasCtx, 0);
         return;
     }
-    var now = Date.now();
-    var deltaSeconds = (now - lastFrameTime) / parseInt(parallaxSpeed * 100);
-    lastFrameTime = now;
-    if (!isFinite(deltaSeconds) || isNaN(deltaSeconds)) deltaSeconds = 0;
+    var deltaSeconds = DeltaSeconds / parseInt(parallaxSpeed * 100);
     if (parallaxBack) parallaxBack.draw(canvasCtx, deltaSeconds);
 }
 
@@ -651,7 +718,6 @@ function AddLayer() {
             layers.push(newLayer);
             RefreshLayerList(false);
             EditLayer(newLayer);
-            ResetCanvas();
         });
     });
 }
@@ -659,6 +725,17 @@ function AddLayer() {
 function SelectCurrentLayer() {
     var layer = GetSelectedLayer();
     EditLayer(layer);
+}
+
+function StepCurrentLayer(x, y) {
+    if (currentLayerEdit != null) {
+        var numBox = getInt("numBox");
+        var numLayerX = getInt("numLayerX") + (numBox * x);
+        var numLayerY = getInt("numLayerY") + (numBox * y);
+        $("#numLayerX").val(numLayerX);
+        $("#numLayerY").val(numLayerY);
+        UpdateSelectedLayer();
+    }
 }
 
 function EditLayer(layer) {
@@ -738,7 +815,7 @@ function MoverLayerUp() {
         lstLayers.removeChild(opt);
         lstLayers.insertBefore(opt, opB);
     }
-    requestAnimationFrame(ResetCanvas);
+    //requestAnimationFrame(ResetCanvas);
 }
 
 function MoverLayerDown() {
@@ -759,7 +836,7 @@ function MoverLayerDown() {
         [layers[idx], layers[nxt]] = [layers[nxt], layers[idx]];
         UpdateLayerIndex();
     }
-    requestAnimationFrame(ResetCanvas);
+    //requestAnimationFrame(ResetCanvas);
 }
 
 function UpdateSelectedLayer() {
@@ -775,6 +852,7 @@ function UpdateSelectedLayer() {
         currentLayerEdit.showOverlay = chkVal("chkShowLayerOverlay");
         currentLayerEdit.overlayOpacity = getFloat("numLayerOverlayOp");
         currentLayerEdit.overlayColor = $("#numColorLayerOverlay").val();
+        $("#lstLayers")[0].options[currentLayerEdit.index].text = currentLayerEdit.name;
     }
 }
 
@@ -785,6 +863,7 @@ function CalcProportion(prop, val, newProp) {
 function AddRevealItem() {
     CreateRevealItemAlert();
     createMapRevealEnabled = true;
+    currentSelectedRevealItem = null;
     currentRevealSteps = [];
 }
 
@@ -832,7 +911,6 @@ function FinishAddMapRevealStep(event) {
         currentSelectedRevealItem.name = mapRevealName;
         currentSelectedRevealItem.steps = [...currentRevealSteps];
         currentSelectedRevealItem.proportion = proportion;
-        currentSelectedRevealItem = null;
     } else {
         var newReveal = new MapReveal();
         newReveal.name = mapRevealName;
@@ -840,6 +918,7 @@ function FinishAddMapRevealStep(event) {
         newReveal.proportion = proportion;
         currentRevealList.push(newReveal);
     }
+    currentSelectedRevealItem = null;
     CancelMapRevealCreation();
     RefreshMapRevealList(keepSelected);
     event.preventDefault();
@@ -943,19 +1022,86 @@ function CreateButton(title, caption, icon, cssclass, style, onclick) {
 
 function CreateToggles() {
     //Reveal Items
-    CreateToggle("chkShowMapRevealNames", "tdShowMapRevealNames", false, "ResetCanvas()", "Hide Names", "Show Names");
-    CreateToggle("chkShowAllMapReveal", "tdShowAllMapReveal", true, "ResetCanvas()", "Hide All", "Show All");
+    CreateToggle("chkShowMapRevealNames", "tdShowMapRevealNames", false, "", "Hide Names", "Show Names");
+    CreateToggle("chkShowAllMapReveal", "tdShowAllMapReveal", true, "", "Hide All", "Show All");
     //Layers
     CreateToggle("chkShowAllLayer", "tdShowAllLayer", true, "UpdateSelectedLayer()", "Hide All", "Show All");
     CreateToggle("chkShowLayerOverlay", "tdShowLayerOverlay", false, "UpdateSelectedLayer()", "Hide Overlay", "Show Overlay");
     CreateToggle("chkShowLayer", "tdShowLayer", true, "UpdateSelectedLayer()", "Hide Layer", "Show Layer");
     //Settings
-    CreateToggle("chkShowGrid", "divShowGrid", true, "ResetCanvas()", "Hide Grid", "Show Grid");
-    CreateToggle("chkHorizontal", "divHorizontal", false, "ResetCanvas()", "Backgrnd Original", "Backgrnd Rotated");
-    CreateToggle("chkShowCoords", "divShowCoords", false, "ResetCanvas()", "Hide Coordinates", "Show Coordinates");
+    CreateToggle("chkShowGrid", "divShowGrid", true, "", "Hide Grid", "Show Grid");
+    CreateToggle("chkHorizontal", "divHorizontal", false, "", "Backgrnd Original", "Backgrnd Rotated");
+    CreateToggle("chkShowCoords", "divShowCoords", false, "", "Hide Coordinates", "Show Coordinates");
     //Parallax
-    CreateToggle("chkParallaxAnim", "divParallaxAnim", true, "ResetCanvas()", "Not Animated", "Animated");
-    CreateToggle("chkParallaxRtl", "divParallaxRtl", false, "ResetCanvas()", "Left to Right", "Right to Left");
-    CreateToggle("chkParallaxVertical", "divParallaxVertical", false, "ResetCanvas()", "Horizontal", "Vertical");
-    CreateToggle("chkParallaxStretch", "divParallaxStretch", false, "ResetCanvas()", "Resize To Fit", "Default");
+    CreateToggle("chkParallaxAnim", "divParallaxAnim", true, "", "Not Animated", "Animated");
+    CreateToggle("chkParallaxRtl", "divParallaxRtl", false, "", "Left to Right", "Right to Left");
+    CreateToggle("chkParallaxVertical", "divParallaxVertical", false, "", "Horizontal", "Vertical");
+    CreateToggle("chkParallaxStretch", "divParallaxStretch", false, "", "Resize To Fit", "Default");
+}
+
+function CalculateDeltaSecs() {
+    var now = Date.now();
+    var deltaSeconds = (now - deltaTime);
+    deltaTime = now;
+    if (!isFinite(deltaSeconds) || isNaN(deltaSeconds)) deltaSeconds = 0;
+    return deltaSeconds;
+}
+
+function ExecuteMoveX() {
+    AMMOUNT = getInt("numBox");
+    MoveXAmmount = AMMOUNT;
+    MoveXPosition = 0.0;
+    InMoveX = true;
+}
+
+function ExecuteMoveY() {
+    AMMOUNT = getInt("numBox");
+    MoveYAmmount = AMMOUNT;
+    MoveYPosition = 0.0;
+    InMoveY = true;
+}
+
+function MoveStepsX(steps, dir = 1) {
+    AMMOUNT = getInt("numBox");
+    MoveXAmmount = AMMOUNT * steps;
+    MoveXPosition = 0.0;
+    MoveXDirection = dir;
+    InMoveX = true;
+}
+
+function MoveStepsY(steps, dir = 1) {
+    AMMOUNT = getInt("numBox");
+    MoveYAmmount = AMMOUNT * steps;
+    MoveYPosition = 0.0;
+    MoveYDirection = dir;
+    InMoveY = true;
+}
+
+function MoveXY() {
+    var deltaSeconds = DeltaSeconds / parseInt(MoveXYSpeed * MoveXYSpeedMultiplier);
+    var ammountX = (MoveXAmmount * MoveXDirection);
+    var ammountY = (MoveYAmmount * MoveYDirection);
+
+    if (InMoveX) {
+        if (Math.abs(MoveXPosition) < MoveXAmmount) {
+            MoveXPosition += (deltaSeconds * MoveXDirection);
+            MoveXPosition = MoveXDirection == 1 ? Math.min(MoveXPosition, MoveXAmmount) : Math.max(MoveXPosition, ammountX);
+            if (Math.abs(MoveXPosition) == MoveXAmmount) {
+                currentX += ammountX;
+                MoveXPosition = 0;
+                InMoveX = false;
+            }
+        }
+    }
+    if (InMoveY) {
+        if (Math.abs(MoveYPosition) < MoveYAmmount) {
+            MoveYPosition += (deltaSeconds * MoveYDirection);
+            MoveYPosition = MoveYDirection == 1 ? Math.min(MoveYPosition, MoveYAmmount) : Math.max(MoveYPosition, ammountY);
+            if (Math.abs(MoveYPosition) == MoveYAmmount) {
+                currentY += ammountY;
+                MoveYPosition = 0;
+                InMoveY = false;
+            }
+        }
+    }
 }

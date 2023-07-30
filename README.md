@@ -1,11 +1,15 @@
 # Deploy Games Virtual Tabletop
 Simple Virtual TableTop Display - [Demo Here](https://stingray-app-bkd5f.ondigitalocean.app/)
-- Load Background;
-- Show Grid;
-- Show Coordinates;
-- Adjusts (X, Y, Zoom, Grid Color);
+- SVTD is a WIP Virtual TableTop Display to use in your RPG sessions!
+- Parallax (Moving Background), Background, Layers e Region Reveals.
 - Box Sizes (With Defaults);
 - Save / Load Config Files (AKA Projects);
+
+Update (30/07/2023):
+- Commands as Menu reorganized;
+- External Control Panel implemented (Animations WIP);
+- Layer editor enhanced;
+- Code review;
 
 Update (10/07/2023):
 - Commands grouped as Menu;
