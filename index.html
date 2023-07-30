@@ -32,6 +32,8 @@
             https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D
             Composições:
             https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation
+            //Rotação:
+            https://stackoverflow.com/questions/8936803/rotating-around-an-arbitrary-point-html5-canvas
 
             canvasCtx.beginPath();
             canvasCtx.arc(0, 0, 60, 0, Math.PI * 2, true);
@@ -62,6 +64,8 @@
             CreateToggles();
             ConfigureCanvas();
             ResetCanvas();
+
+            //$("#modalEvent").modal("show");
         });
 
         function ResetCanvas() {
@@ -312,9 +316,11 @@
                                     <li><a onclick="ExecuteCommand(13)"><i class="glyphicon glyphicon-list-alt"></i>&nbsp;Layers</a></li>
                                     <li><a onclick="ExecuteCommand(14)"><i class="glyphicon glyphicon-eye-close"></i>&nbsp;Map Reveals</a></li>
                                     <li><a onclick="ExecuteCommand(15)"><i class="glyphicon glyphicon-film"></i>&nbsp;Animations</a></li>
-                                    <li><a onclick="ShowSettingsWindow()"><i class="glyphicon glyphicon-th"></i>&nbsp;Control Panel</a></li>
                                 </ul>
                             </div>
+                            <a class="btn btn-default" onclick="ShowSettingsWindow()" title="Control Panel">
+                                <i class="glyphicon glyphicon-th"></i>&nbsp;Control Panel
+                            </a>
                             <a class="btn btn-default" onclick="WriteSettings()" title="Save Settings">
                                 <i class="glyphicon glyphicon-save"></i>&nbsp;Save
                             </a>
@@ -350,6 +356,218 @@
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(6)">CY+</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(7)">CY-</a>
         </div>
+    </div>
+    
+    <script type="text/javascript">
+        function ConfigureActionControls() {
+            var type = $("#ddlActionType").val();
+            var ddlActionDirection = $("#ddlActionDirection");
+            var numActionValue = $("#numActionValue");
+            var chkActionValue = $("#chkActionValue");
+            var numActionTime = $("#numActionTime");
+
+            ddlActionDirection.prop("disabled", false).val("n");
+            numActionValue.prop("disabled", false).val("1");
+            chkActionValue.prop("disabled", false).prop("checked", false);
+            numActionTime.prop("disabled", false).val("0.5");
+
+            switch (type) {
+                case EventType.MoveScene:
+                    chkActionValue.prop("disabled", true);
+                    break;
+
+                case EventType.ChangeFog:
+                    ddlActionDirection.prop("disabled", true);
+                    chkActionValue.prop("disabled", true);
+                    break;
+
+                case EventType.ChangeLayer:
+                case EventType.ChangeReveal:
+                    ddlActionDirection.prop("disabled", true);
+                    numActionValue.prop("disabled", true);
+                    numActionTime.prop("disabled", true);
+                    break;
+            }
+        }
+    </script>
+
+    <div class="modal fade" id="modalEvent" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
+        <div class="modal-dialog" role="document" style="width: 490px">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"  aria-label="Close"><span aria-hidden="true">&times;</span></button>
+                    <h4 class="modal-title">Manage Event / Actions</h4>
+                </div>
+                <div class="modal-body">
+                    <table style="width: 100%">
+                        <tr>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Name:</span>
+                                    <input type="text" class="form-control input-sm" id="txtEventName" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <label class="lbl-header" style="margin-top: 8px;">Actions</label>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <table style="width: 100%">
+                                    <tr>
+                                        <td style="width: 170px;">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-addon" style="font-weight: bold">Type:</span>
+                                                <select id="ddlActionType" class="form-control input-sm" onchange="ConfigureActionControls()">
+                                                    <option value="move">Move Scene</option>
+                                                    <option value="fog">Change Fog</option>
+                                                    <option value="layer">View Layer</option>
+                                                    <option value="reveal">View Reveal</option>
+                                                </select>
+                                            </div>
+                                        </td>
+                                        <td style="width: 8px">&nbsp;</td>
+                                        <td style="width: 170px">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-addon" style="font-weight: bold">Direction:</span>
+                                                <select id="ddlActionDirection" class="form-control input-sm">
+                                                    <option value="n">None</option>
+                                                    <option value="l">To Left</option>
+                                                    <option value="r">To Right</option>
+                                                    <option value="t">To Up</option>
+                                                    <option value="b">To Down</option>
+                                                </select>
+                                            </div>
+                                        </td>
+                                        <td style="width: 8px">&nbsp;</td>
+                                        <td style="vertical-align: top">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-addon">
+                                                    <input type="checkbox" id="chkIsParallel" />
+                                                </span>
+                                                <div class="form-control input-sm">Parallel</div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <table style="width: 100%;margin-top: 10px">
+                                    <tr>
+                                        <td style="width: 130px">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-addon" style="font-weight: bold">Value:</span>
+                                                <input type="number" class="form-control input-sm" min="0" step="1" id="numActionValue" value="1" />
+                                            </div>
+                                        </td>
+                                        <td style="width: 8px">&nbsp;</td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-addon">
+                                                    <input type="checkbox" id="chkActionValue" />
+                                                </span>
+                                                <div class="form-control input-sm">True/False</div>
+                                            </div>
+                                        </td>
+                                        <td style="width: 8px">&nbsp;</td>
+                                        <td>
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-addon" style="font-weight: bold">Time:</span>
+                                                <input type="number" class="form-control input-sm" min="0" max="3" step="0.01" id="numActionTime" value="0.5" />
+                                            </div>
+                                        </td>
+                                        <td style="width: 8px">&nbsp;</td>
+                                        <td style="text-align: right; width: 10px;">
+                                            <div class="input-group input-group-sm">
+                                                <div class="input-group-btn">
+                                                    <a class="btn btn-success" onclick="ReadSettings()">
+                                                        <i class="glyphicon glyphicon-floppy-disk"></i>&nbsp;Set
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                    <table style="width: 100%; margin-top: 10px; font-size: 12px;" class="table table-bordered table-condensed">
+                        <thead>
+                            <tr>
+                                <th style="text-align: center;width: 60px"></th>
+                                <th style="text-align: center">Type</th>
+                                <th style="text-align: center; width: 85px;">Direction</th>
+                                <th style="text-align: center; width: 55px;">Parallel</th>
+                                <th style="text-align: center; width: 45px;">Value</th>
+                                <th style="text-align: center; width: 45px;">Check</th>
+                                <th style="text-align: center; width: 45px;">Time</th>
+                            </tr>
+                        </thead>
+                    </table>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-sm btn-primary">Save</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="actionPanel" class="object-panel" style="display: none">
+        <table style="width: 100%;">
+            <tr>
+                <td><label class="lbl-header">Actions</label></td>
+            </tr>
+            <tr>
+                <td>
+                    <table style="width: 100%">
+                        <tr>
+                            <td></td>
+                            <td style="text-align: right; vertical-align: baseline;">
+                                <div class="input-group input-group-sm">
+                                    <div class="input-group-btn">
+                                        <a class="btn btn-default" onclick="AddLayer()" title="Add Layer">
+                                            <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
+                                        </a>
+                                        <a class="btn btn-default" onclick="CloneLayer()" title="Clone Layer">
+                                            <i class="glyphicon glyphicon-copy"></i>&nbsp;Cln
+                                        </a>
+                                        <a class="btn btn-default" onclick="DeleteLayer()" title="Delete Layer">
+                                            <i class="glyphicon glyphicon-remove"></i>&nbsp;Del
+                                        </a>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <table style="width: 100%">
+                        <tr>
+                            <td>
+                                <select multiple id="lstActions" class="form-control input-sm" style="height: 100px"
+                                        ondblclick="ChangeCurrentAction()"></select>
+                            </td>
+                            <td style="width: 40px">
+                                <div class="btn-group btn-group-vertical">
+                                    <a class="btn btn-default" style="height: 50px" onclick="MoverRevealUp()" title="Move List Up">
+                                        <i class="glyphicon glyphicon-triangle-top"></i>
+                                    </a>
+                                    <a class="btn btn-default" style="height: 50px" onclick="MoverRevealDown()" title="Move List Down">
+                                        <i class="glyphicon glyphicon-triangle-bottom" style="top: 20px;"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div id="animationPanel" class="object-panel" style="display: none">
+
     </div>
 
     <div id="mapRevealPanel" class="object-panel map-reveal-panel" style="display: none">

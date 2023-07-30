@@ -298,3 +298,20 @@ body {
     margin: 0;
     padding: 0;
 }
+
+.modal-footer, .modal-header {
+    padding: 5px !important;
+}
+
+    .modal-header .close {
+        margin: 5px 5px 0 0;
+    }
+
+.modal-title {
+    margin-top: 4px;
+    margin-left: 10px;
+}
+
+.modal-body {
+    padding: 10px;
+}

@@ -1,6 +1,23 @@
-﻿class AnimationEvent {
+﻿var EventType = {
+    MoveScene: "move",
+    ChangeFog: "fog",
+    ChangeLayer: "layer",
+    ChangeReveal: "reveal"
+};
+
+class AnimationEvent {
+    constructor() {
+        this.name = "";
+        this.index = 0;
+        this.actions = [];
+    }
+}
+
+class AnimationAction {
     constructor() {
         this.type = "";
+        this.name = "";
+        this.index = 0;
         this.isParallel = false;
         this.parameters = [];
         this.executed = false;
