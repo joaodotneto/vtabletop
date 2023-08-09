@@ -11,13 +11,19 @@
     <link rel="stylesheet" href="css/common.css?5" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?4"></script>
-    <script type="text/javascript" src="js/classes.js"></script>
+    <script type="text/javascript" src="js/common.js?5"></script>
+    <script type="text/javascript" src="js/classes.js?3"></script>
+    <style type="text/css">
+        .mc-toggle-switch {
+            margin-bottom: 0 !important;
+        }
+    </style>
     <script type="text/javascript">
         var currentImg = new Image();
         var currentAnimation = null;
 
         $(document).ready(() => {
+            CreateToggle("chkToggleBox", "divToggleBox", true, "", "Hide Grid", "Show Grid");
             ConfigureCanvas();
             ResetCanvas();
         });
@@ -25,13 +31,13 @@
         function ConfigureCanvas() {
             canvasObj = document.getElementById("baseCanvas");
             canvasCtx = canvasObj.getContext("2d");
-            canvasCtx.canvas.width = canvasObj.width = 288;
-            canvasCtx.canvas.height = canvasObj.height = 288;
+            canvasCtx.canvas.width = canvasObj.width = 286;
+            canvasCtx.canvas.height = canvasObj.height = 286;
         }
 
         function ResetCanvas() {
             requestAnimationFrame(ResetCanvas);
-            var backcolor = $("#numColor").val();
+            var backcolor = $("#numBackColor").val();
             canvasCtx.save();
             canvasCtx.fillStyle = backcolor;
             canvasCtx.fillRect(0, 0, canvasObj.width, canvasObj.height);
@@ -42,12 +48,39 @@
             if (currentAnimation) {
                 currentAnimation.draw(canvasCtx, deltaSeconds);
             }
+            RenderGridAndCoords();
+        }
+
+        function RenderGridAndCoords() {
+            var grid = chkVal("chkToggleBox");
+            var AMMOUNT = getInt("numBox");
+            var stepsV = (canvasCtx.canvas.width / AMMOUNT) + 1;
+            var stepsH = (canvasCtx.canvas.height / AMMOUNT) + 1;
+            canvasCtx.save();
+            if (grid) {
+                for (var i = 0; i < stepsV; i++) {
+                    if (i > 0) {
+                        var pos = (i * AMMOUNT) - 1;
+                        DrawVerLine(pos);
+                    }
+                }
+                for (var j = 0; j < stepsH; j++) {
+                    if (j > 0) {
+                        var pos = (j * AMMOUNT) - 1;
+                        DrawHorLine(pos);
+                    }
+                }
+            }
+            canvasCtx.restore();
         }
 
         function SelectImage() {
             LoadImage((file) => {
+                $("#divFileName").html(file.name);
                 currentAnimation = new ImageAnimation();
                 currentAnimation.initialize(URL.createObjectURL(file), (img) => {
+                    $("#txtAnimName").val(file.name);
+                    $("#txtImageSize").val(`${img.width};${img.height}`);
                     currentAnimation.frameStep = 2;
                     currentAnimation.frameWidth = img.width / 2;
                     currentAnimation.frameHeight = img.height;
@@ -57,13 +90,57 @@
 
         function UpdateAnimation() {
             if (currentAnimation) {
-                var step = getInt("numAnimW");
+                var step = getInt("numAnimH");
+                currentAnimation.name = $("#txtAnimName").val();
+                currentAnimation.file = $("#divFileName").text();
                 currentAnimation.frameStep = step;
                 currentAnimation.frameWidth = currentAnimation.img.width / step;
-                currentAnimation.frameSpeed = getFloat("numAnimH", 0.5);
+                currentAnimation.frameSpeed = getFloat("numAnimSpeed", 0.5);
                 currentAnimation.flipType = getInt("lstFlipAnim");
                 currentAnimation.transp = getFloat("numAnimOp", 1.0);
+                currentAnimation.frameZoom = getFloat("numImageResize", 1.0);
+
+                currentAnimation.backColor = $("#numBackColor").val();
+                currentAnimation.gridColor = $("#numColor").val();
+                currentAnimation.gridSize = $("#numBox").val();
+                currentAnimation.gridShow = chkVal("chkToggleBox");
             }
+        }
+
+        function StepAnimation(x, y) {
+            var numBox = getInt("numBox");
+            var numLayerX = getInt("numAnimationX") + (numBox * x);
+            var numLayerY = getInt("numAnimationY") + (numBox * y);
+            $("#numAnimationX").val(numLayerX);
+            $("#numAnimationY").val(numLayerY);
+        }
+
+        function EditAnimation(animation) {
+            currentAnimation = animation;
+            currentAnimation.initialize(currentAnimation.b64, (img) => {
+                $("#txtImageSize").val(`${img.width};${img.height}`);
+                $("#numAnimH").val(currentAnimation.frameStep);
+                $("#txtAnimName").val(currentAnimation.name);
+                $("#divFileName").text(currentAnimation.file);
+                $("#numAnimSpeed").val(currentAnimation.frameSpeed);
+                $("#lstFlipAnim").val(currentAnimation.flipType);
+                $("#numAnimOp").val(currentAnimation.transp);
+                $("#numImageResize").val(currentAnimation.frameZoom);
+                $("#numBackColor").val(currentAnimation.backColor);
+                $("#numColor").val(currentAnimation.gridColor);
+                $("#numBox").val(currentAnimation.gridSize);
+                $("#chkToggleBox").prop("checked", currentAnimation.gridShow);
+            });
+        }
+
+        function GetAnimationInfo() {
+            if (currentAnimation) {
+                UpdateAnimation();
+                currentAnimation.b64 = GetImageAsBase64(currentAnimation.img);
+                currentAnimation.img = null;
+                return currentAnimation;
+            }
+            return null;
         }
     </script>
     <title></title>
@@ -77,13 +154,13 @@
     <div style="margin: 10px 0 0 10px;">
         <table style="width: 650px;">
             <tr>
-                <td colspan="5"><label class="lbl-header">Animation</label></td>
-            </tr>
-            <tr>
                 <td style="width: 250px; position: relative">
                     <canvas id="baseCanvas" style="width: 288px; height: 288px; border: 1px solid #000000; "></canvas>
                     <div style="position: absolute; top: 1px; right: 1px; width: 50px;">
-                        <input type="color" class="form-control input-sm" id="numColor" value="#ffffff" />
+                        <input type="color" class="form-control input-sm" id="numBackColor" value="#ffffff" />
+                    </div>
+                    <div style="position: absolute; top: 31px; right: 1px; width: 50px;">
+                        <input type="color" class="form-control input-sm" id="numColor" value="#ff0000" />
                     </div>
                 </td>
                 <td style="width: 8px">&nbsp;</td>
@@ -94,9 +171,31 @@
                                 <i class="glyphicon glyphicon-picture"></i>&nbsp;Select
                             </a>
                         </div>
-                        <div class="form-control input-sm" style="background-color: #eee"></div>
+                        <div class="form-control input-sm" style="background-color: #eee" id="divFileName"></div>
                     </div>
                     <table style="width: 100%">
+                        <tr>
+                            <td style="width: 170px">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Box:</span>
+                                    <input type="number" class="form-control input-sm" min="48" max="128" step="1" id="numBox" value="96" />
+                                    <div class="input-group-btn">
+                                        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></button>
+                                        <ul class="dropdown-menu" style="min-width: 50px !important;">
+                                            <li><a onclick="SetBoxValue('48')">48</a></li>
+                                            <li><a onclick="SetBoxValue('72')">72</a></li>
+                                            <li><a onclick="SetBoxValue('96')">96</a></li>
+                                        </ul>
+                                    </div>
+                                </div>
+                            </td>
+                            <td style="width: 8px">&nbsp;</td>
+                            <td>
+                                <div id="divToggleBox"></div>
+                            </td>
+                        </tr>
+                    </table>
+                    <table style="width: 100%;margin-top: 8px">
                         <tr>
                             <td colspan="3">
                                 <div class="input-group input-group-sm">
@@ -106,17 +205,32 @@
                             </td>
                         </tr>
                         <tr>
-                            <td style="width: 160px">
+                            <td style="width: 170px">
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Size:</span>
+                                    <input type="text" class="form-control input-sm" id="txtImageSize" disabled="disabled" />
+                                </div>
+                            </td>
+                            <td style="width: 8px">&nbsp;</td>
+                            <td>
+                                <div class="input-group input-group-sm">
+                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Resize:</span>
+                                    <input type="number" class="form-control input-sm" id="numImageResize" min="0.1" step=".01" value="1" onblur="UpdateAnimation()" />
+                                </div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Frames:</span>
-                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numAnimW" value="2" onchange="UpdateAnimation()" onblur="UpdateAnimation()" />
+                                    <input type="number" class="form-control input-sm" min="0" step="1" id="numAnimH" value="2" onchange="UpdateAnimation()" onblur="UpdateAnimation()" />
                                 </div>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
                                     <span class="input-group-addon addon-74p" style="font-weight: bold">Speed:</span>
-                                    <input type="number" class="form-control input-sm" min="0.01" max="1" step=".01" id="numAnimH" value="0.5" onchange="UpdateAnimation()" onblur="UpdateAnimation()" />
+                                    <input type="number" class="form-control input-sm" min="0.01" max="1" step=".01" id="numAnimSpeed" value="0.5" onchange="UpdateAnimation()" onblur="UpdateAnimation()" />
                                 </div>
                             </td>
                         </tr>

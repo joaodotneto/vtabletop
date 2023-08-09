@@ -11,8 +11,8 @@
     <link rel="stylesheet" href="css/common.css?1" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?2"></script>
-    <script type="text/javascript" src="js/classes.js?1"></script>
+    <script type="text/javascript" src="js/common.js?3"></script>
+    <script type="text/javascript" src="js/classes.js?3"></script>
     <title></title>
     <script type="text/javascript">
         $(document).ready(() => {
@@ -139,6 +139,11 @@
             }, timVal * 100);
         }
 
+        function SendChangeFog() {
+            var stsVal = getFloat("numGlobalShow");
+            SendToParent("ChangeFog", [stsVal]);
+        }
+
         function ReadSettings() {
             if (HasOpenFilePicker()) {
                 OpenJsonFile((result) => {
@@ -183,7 +188,7 @@
                             <div class="input-group input-group-sm" title="Global Show" style="margin-bottom: 3px">
                                 <span class="input-group-addon" style="font-weight: bold">Fog:</span>
                                 <div class="form-control input-sm">
-                                    <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" />
+                                    <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" oninput="SendChangeFog()" />
                                 </div>
                                 <div class="input-group-btn">
                                     <a class="btn btn-default" onclick="ExecuteShowMap(true)" title="Show Map">

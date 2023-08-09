@@ -26,6 +26,8 @@ class AnimationAction {
 
 class ImageLayer {
     constructor() {
+        this.key = GenerateGUID();
+        this.file = "";
         this.name = "";
         this.index = 0;
         this.x = 0;
@@ -40,6 +42,12 @@ class ImageLayer {
         this.overlayOpacity = 1.0;
         this.overlayColor = "#000000";
         this.img = new Image();
+        this.b64 = null;
+
+        this.backColor = "#ffffff";
+        this.gridColor = "#ff0000";
+        this.gridSize = "96";
+        this.gridShow = true;
     }
 
     loadImage(imgSrc, callback) {
@@ -95,10 +103,12 @@ class ImageAnimation extends ImageLayer {
         this.frameSpeed = 0.5;
         this.frameTime = 0.0;
         this.frameCount = 0;
+        this.frameZoom = 1.0;
     }
 
     draw(ctx, delta) {
         if (!this.visible) return;
+        if (!this.img) return;
         this.frameTime += delta;
         if (this.frameTime >= this.frameSpeed) {
             this.frameTime = 0;
@@ -110,9 +120,86 @@ class ImageAnimation extends ImageLayer {
         ctx.save();
         ctx.globalAlpha = this.transp;
         var pos = this.calcFlip(ctx, this.frameWidth, this.frameHeight);
-        ctx.drawImage(this.img, (this.frameCount * this.frameWidth), 0,
-            this.frameWidth, this.frameHeight, (this.x + pos.x),
-            (this.y + pos.y), this.frameWidth, this.frameHeight);
+
+        var frameW = this.frameWidth * this.frameZoom;
+        var frameH = this.frameHeight * this.frameZoom;
+        var frameX = (this.x + pos.x);
+        var frameY = (this.y + pos.y);
+        var frameS = (this.frameCount * this.frameWidth);
+        //console.log({ S: frameS, X: frameX, Y: frameY, W: frameW, H: frameH });
+
+        ctx.drawImage(this.img,
+            frameS,
+            0,
+            this.frameWidth,
+            this.frameHeight,
+            frameX, frameY, frameW, frameH);
+        ctx.restore();
+    }
+}
+
+class ImageAnimationInstance extends ImageAnimation {
+    constructor() {
+        super();
+        this.key = GenerateGUID();
+        this.animKey = "";
+        this.animName = "";
+        this.posx = 0;
+        this.posy = 0;
+        this.opacity = 1;
+        this.delay = 0;
+        this.runOnce = false;
+    }
+
+    GetImage() {
+        if (this.img == null) {
+            var ret = currentAnimationImageList.find(x => x.key == this.animKey);
+            if (ret) this.img = ret.img;
+        }
+        return null;
+    }
+
+    cloneFromAnimation(animation, idx) {
+        this.frameWidth = animation.frameWidth;
+        this.frameHeight = animation.frameHeight;
+        this.frameStep = animation.frameStep;
+        this.frameSpeed = animation.frameSpeed;
+        this.frameZoom = animation.frameZoom;
+        this.animKey = animation.key;
+        this.animName = animation.name + ` Int ${idx}`;
+    }
+
+    draw(ctx, delta) {
+        if (!this.visible) return;
+        this.GetImage();
+        if (!this.img) return;
+
+        this.frameTime += delta;
+        if (this.frameTime >= this.frameSpeed) {
+            this.frameTime = 0;
+            this.frameCount += 1;
+            if (this.frameCount > this.frameStep - 1) {
+                this.frameCount = 0;
+            }
+        }
+
+        ctx.save();
+        ctx.globalAlpha = this.transp;
+        var pos = this.calcFlip(ctx, this.frameWidth, this.frameHeight);
+
+        var frameW = this.frameWidth * this.frameZoom;
+        var frameH = this.frameHeight * this.frameZoom;
+        var frameX = (this.x + pos.x) + this.posx;
+        var frameY = (this.y + pos.y) + this.posy;
+        var frameS = (this.frameCount * this.frameWidth);
+        //console.log({ S: frameS, X: frameX, Y: frameY, W: frameW, H: frameH });
+
+        ctx.drawImage(this.img,
+            frameS,
+            0,
+            this.frameWidth,
+            this.frameHeight,
+            frameX, frameY, frameW, frameH);
         ctx.restore();
     }
 }
