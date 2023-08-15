@@ -11,6 +11,27 @@
     });
 }
 
+var currentRevealLayer = null;
+var currentRevealInterval = null;
+var currCmdRevealShow = false;
+var startRevealVal = 0.0;
+
+function RevealLayer(idx) {
+    currentRevealLayer = currentLayerList[idx];
+    currCmdRevealShow = false;
+    startRevealVal = 0.0;
+    currentRevealLayer.transp = 0.0;
+    currentRevealLayer.visible = true;
+    var currentRevealInterval = setInterval(() => {
+        startRevealVal = Math.min(1, startRevealVal + 0.1);
+        currentRevealLayer.transp = startRevealVal;
+        if (startRevealVal == 1) {
+            clearInterval(currentRevealInterval);
+        }
+    }, 50);
+    
+}
+
 function SelectCurrentLayer() {
     var layer = GetSelectedLayer();
     EditLayer(layer);

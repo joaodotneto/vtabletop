@@ -138,7 +138,8 @@
             }
 
             currentAnimationInstanceList.forEach((instance) => {
-                instance.draw(canvasCtx, DeltaSeconds / 1000);
+                var delta = DeltaSeconds / 1000;
+                instance.draw(canvasCtx, delta);
             });
 
             //Reveals
@@ -407,28 +408,6 @@
                     break;
             }
         }
-
-        function AddAnimationInstance() {
-            var animation = GetSelectedAnimation();
-            if (!animation) return;
-            var numInstances = currentAnimationInstanceList.filter(x => x.animKey == animation.key).length + 1;
-            var newInstance = new ImageAnimationInstance();
-            newInstance.cloneFromAnimation(animation, numInstances);
-            currentAnimationInstanceList.push(newInstance);
-            RefreshAnimationInstanceList(false);
-        }
-
-        function RefreshAnimationInstanceList(keepSelection = true) {
-            RefreshSelectList("lstAnimationInstances", currentAnimationInstanceList, "animName", "key", keepSelection);
-        }
-
-        function EditAnimationInstance() {
-
-        }
-
-        function DeleteAnimationInstance() {
-
-        }
     </script>
 
     <div class="modal fade" id="modalAnimation" tabindex="-1" role="dialog" data-backdrop="static" data-keyboard="false">
@@ -682,14 +661,42 @@
                 </td>
             </tr>
             <tr>
+                <td colspan="3">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p" style="font-weight: bold">Name:</span>
+                        <input type="text" class="form-control input-sm" id="txtAnimName" onblur="UpdateAnimationInstance()" />
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
+                        <input type="number" class="form-control input-sm" min="0.01" max="1" step=".01" id="numAnimOp" value="1" onblur="UpdateAnimationInstance()" />
+                    </div>
+                </td>
+                <td></td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p" style="font-weight: bold">Flip:</span>
+                        <select class="form-control input-sm" id="lstFlipAnim"  onchange="UpdateAnimationInstance()">
+                            <option value="0">None</option>
+                            <option value="1">Horizontal</option>
+                            <option value="2">Vertical</option>
+                            <option value="3">Both</option>
+                        </select>
+                    </div>
+                </td>
+            </tr>
+            <tr>
                 <td style="width: 170px">
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-74p" style="font-weight: bold">Step X:</span>
                         <div class="input-group-btn">
-                            <a class="btn btn-default" onclick="StepAnimation(-1, 0)" title="Step Minus X">
+                            <a class="btn btn-default" onclick="StepAnimationInstance(-1, 0)" title="Step Minus X">
                                 <i class="glyphicon glyphicon-triangle-left icon-adj"></i>
                             </a>
-                            <a class="btn btn-default" onclick="StepAnimation(1, 0)" title="Step Plus X">
+                            <a class="btn btn-default" onclick="StepAnimationInstance(1, 0)" title="Step Plus X">
                                 <i class="glyphicon glyphicon-triangle-right icon-adj"></i>
                             </a>
                         </div>
@@ -701,10 +708,10 @@
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-74p" style="font-weight: bold">Step Y:</span>
                         <div class="input-group-btn">
-                            <a class="btn btn-default" onclick="StepAnimation(0, 1)" title="Step Minus Y">
+                            <a class="btn btn-default" onclick="StepAnimationInstance(0, 1)" title="Step Minus Y">
                                 <i class="glyphicon glyphicon-triangle-bottom icon-adj"></i>
                             </a>
-                            <a class="btn btn-default" onclick="StepAnimation(0, -1)" title="Step Plus Y">
+                            <a class="btn btn-default" onclick="StepAnimationInstance(0, -1)" title="Step Plus Y">
                                 <i class="glyphicon glyphicon-triangle-top icon-adj"></i>
                             </a>
                         </div>
@@ -716,14 +723,16 @@
                 <td>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-74p" style="font-weight: bold">X:</span>
-                        <input type="number" class="form-control input-sm" min="-960" step="1" id="numAnimationX" value="0" onblur="UpdateAnimation()" />
+                        <input type="number" class="form-control input-sm" min="-960" step="1" 
+                               id="numAnimationX" value="0" onblur="UpdateAnimationInstance()" />
                     </div>
                 </td>
                 <td style="width: 8px">&nbsp;</td>
                 <td>
                     <div class="input-group input-group-sm">
                         <span class="input-group-addon addon-74p" style="font-weight: bold">Y:</span>
-                        <input type="number" class="form-control input-sm" min="-960" step="1" id="numAnimationX" value="0" onblur="UpdateAnimation()" />
+                        <input type="number" class="form-control input-sm" min="-960" step="1" 
+                               id="numAnimationY" value="0" onblur="UpdateAnimationInstance()" />
                     </div>
                 </td>
             </tr>

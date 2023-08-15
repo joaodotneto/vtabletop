@@ -144,6 +144,7 @@ class ImageAnimationInstance extends ImageAnimation {
         this.key = GenerateGUID();
         this.animKey = "";
         this.animName = "";
+        this.animflipType = 0;
         this.posx = 0;
         this.posy = 0;
         this.opacity = 1;
@@ -166,7 +167,10 @@ class ImageAnimationInstance extends ImageAnimation {
         this.frameSpeed = animation.frameSpeed;
         this.frameZoom = animation.frameZoom;
         this.animKey = animation.key;
-        this.animName = animation.name + ` Int ${idx}`;
+        this.name = animation.name + ` Int ${idx}`;
+        this.animName = animation.name;
+        this.transp = animation.transp;
+        this.flipType = this.animflipType = animation.flipType;
     }
 
     draw(ctx, delta) {

@@ -87,6 +87,8 @@ var currentAnimationImageList = [];
 var currentSelectedAnimation = null;
 var currentSelectedAnimationIdx = null;
 var currentAnimationInstanceList = [];
+var currentAnimationInstance = null;
+var currentAnimationInstanceIndex = null;
 
 const OpenJsonFile = async (callback) => {
     try {
@@ -190,6 +192,10 @@ function ConfigureWindowMessage() {
                     objLayer.visible = val;
                     objLayer.showOverlay = ovl;
                     RefreshLayerList();
+                    break;
+
+                case "RevealLayer":
+                    RevealLayer(attrs[0]);
                     break;
 
                 case "ResetCanvas":
@@ -724,6 +730,8 @@ function ParseAndApplySettings(result) {
             var nAnimation = CloneClassInstance(model, obj);
             nAnimation.img = null;
             nAnimation.b64 = null;
+            nAnimation.frameTime = 0;
+            nAnimation.frameCount = 0;
             currentAnimationInstanceList.push(nAnimation);
         });
         RefreshAnimationInstanceList(false);

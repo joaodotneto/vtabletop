@@ -57,6 +57,11 @@
             SendToParent("UpdateReveal", [idx, chkVal(chk)]);
         }
 
+        function RevealLayer(idx) {
+            $(`#chkShowLayer${idx}`).prop("checked", true);
+            SendToParent("RevealLayer", [idx]);
+        }
+
         function SetLocalSettings(objInp) {
             $("#numGlobalShow").val(objInp.Fog ?? 0.0);
             $("#chkShowGrid").prop("checked", objInp.G);
@@ -75,6 +80,8 @@
                             id="chkShowLayer${idx}" onclick="SetLayer('${idx}', 'chkShowLayer${idx}', 'chkShowOVerlay${idx}')" /></td>
                         <td style="text-align: center;"><input type="checkbox" ${(obj.showOverlay ? "checked" : "")}
                             id="chkShowOVerlay${idx}" onclick="SetLayer('${idx}', 'chkShowLayer${idx}', 'chkShowOVerlay${idx}')" /></td>
+                        <td style="text-align: center;"><input type="button" class="btn btn-success btn-sm" value="Reveal"
+                            id="btnRevealLayer${idx}" onclick="RevealLayer('${idx}')" /></td>
                     </tr>`;
                 });
                 $("#tbLayers").html(tbHtml);
@@ -231,6 +238,7 @@
                                 <th style="padding-left: 5px">Layer</th>
                                 <th style="width: 65px; text-align: center">Show</th>
                                 <th style="width: 65px;text-align: center">Overlay</th>
+                                <th style="width: 65px;text-align: center"></th>
                             </tr>
                         </thead>
                         <tbody id="tbLayers"></tbody>
