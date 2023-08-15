@@ -150,6 +150,7 @@ class ImageAnimationInstance extends ImageAnimation {
         this.opacity = 1;
         this.delay = 0;
         this.runOnce = false;
+        this.showMe = false;
     }
 
     GetImage() {
@@ -171,9 +172,30 @@ class ImageAnimationInstance extends ImageAnimation {
         this.animName = animation.name;
         this.transp = animation.transp;
         this.flipType = this.animflipType = animation.flipType;
+        this.frameTime = 0;
+        this.frameCount = 0;
     }
 
-    draw(ctx, delta) {
+    reset() {
+        this.visible = false;
+        this.frameTime = 0;
+        this.frameCount = 0;
+    }
+
+    resetImage() {
+        this.frameTime = 0;
+        this.frameCount = 0;
+        this.img = null;
+        this.b64 = null;
+    }
+
+    run() {
+        this.visible = true;
+        this.frameTime = 0;
+        this.frameCount = 0;
+    }
+
+    draw(ctx, delta, modX = 0, modY = 0) {
         if (!this.visible) return;
         this.GetImage();
         if (!this.img) return;
@@ -184,20 +206,20 @@ class ImageAnimationInstance extends ImageAnimation {
             this.frameCount += 1;
             if (this.frameCount > this.frameStep - 1) {
                 this.frameCount = 0;
+                if (this.runOnce) this.visible = false;
             }
         }
 
+        if (!this.visible) return;
         ctx.save();
         ctx.globalAlpha = this.transp;
-        var pos = this.calcFlip(ctx, this.frameWidth, this.frameHeight);
 
+        var pos = this.calcFlip(ctx, this.frameWidth, this.frameHeight);
         var frameW = this.frameWidth * this.frameZoom;
         var frameH = this.frameHeight * this.frameZoom;
-        var frameX = (this.x + pos.x) + this.posx;
-        var frameY = (this.y + pos.y) + this.posy;
+        var frameX = ((this.x + pos.x)) + this.posx; //+ modX
+        var frameY = ((this.y + pos.y)) + this.posy; //+ modY
         var frameS = (this.frameCount * this.frameWidth);
-        //console.log({ S: frameS, X: frameX, Y: frameY, W: frameW, H: frameH });
-
         ctx.drawImage(this.img,
             frameS,
             0,

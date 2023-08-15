@@ -39,11 +39,7 @@ function SelectCurrentLayer() {
 
 function StepCurrentLayer(x, y) {
     if (currentLayerEdit != null) {
-        var numBox = getInt("numBox");
-        var numLayerX = getInt("numLayerX") + (numBox * x);
-        var numLayerY = getInt("numLayerY") + (numBox * y);
-        $("#numLayerX").val(numLayerX);
-        $("#numLayerY").val(numLayerY);
+        StepXY(x, y, "numLayerX", "numLayerY");
         UpdateSelectedLayer();
     }
 }

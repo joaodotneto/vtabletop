@@ -14,6 +14,7 @@ var MouseKey = {
     Right: 3
 }
 
+var CurrentOpenedSettings = null;
 var LastOpenedHandle = null;
 var canvasObj = null;
 var canvasCtx = null;
@@ -131,6 +132,18 @@ const SaveFile = async (blob) => {
     }
 };
 
+function ClearBackground() {
+    currentImg = new Image();
+}
+
+function ClearParallax() {
+    parallaxBack = null;
+    parallaxDirection = false;
+    parallaxVertical = false;
+    parallaxSpeed = 2.0;
+    parallaxStretch = false;
+}
+
 function SetLocalSettings(objInp) {
     $("#numGlobalShow").val(objInp.Fog ?? 0.0);
     $("#chkShowGrid").prop("checked", objInp.G);
@@ -142,14 +155,6 @@ function SetLocalSettings(objInp) {
     if (objInp.Parallax) {
         var objP = objInp.Parallax;
         $("#chkParallaxAnim").prop("checked", objP.Anim);
-    }
-
-    if (objInp.Layers) {
-
-    }
-
-    if (objInp.Reveals) {
-
     }
 }
 
@@ -164,38 +169,53 @@ function ConfigureWindowMessage() {
             var attrs = objParameters.attrs;
             var objData = objParameters.parameters;
             var cmd = objParameters.cmd;
+            var par01 = attrs[0];
             switch (cmd) {
+                case "ReloadSettings":
+                    if (CurrentOpenedSettings != null) {
+                        InvokeConfigOnSettingsWindow("LoadSettings", [CurrentOpenedSettings]);
+                    }
+                    break;
+
                 case "ChangeFog":
-                    $("#numGlobalShow").val(attrs[0]);
+                    $("#numGlobalShow").val(par01);
                     break;
 
                 case "OpenFile":
-                    ParseAndApplySettings(attrs[0]);
+                    ParseAndApplySettings(par01);
                     break;
 
                 case "UpdateInfo":
-                    SetLocalSettings(attrs[0]);
+                    SetLocalSettings(par01);
                     break;
 
                 case "UpdateReveal":
-                    var idx = attrs[0];
                     var val = attrs[1];
-                    currentRevealList[idx].visible = val;
+                    currentRevealList[par01].visible = val;
                     RefreshMapRevealList();
                     break;
 
                 case "UpdateLayer":
-                    var idx = attrs[0];
                     var val = attrs[1];
                     var ovl = attrs[2];
-                    var objLayer = currentLayerList[idx];
+                    var objLayer = currentLayerList[par01];
                     objLayer.visible = val;
                     objLayer.showOverlay = ovl;
                     RefreshLayerList();
                     break;
 
+                case "SetAnimation":
+                    var objAnim = currentAnimationInstanceList[par01];
+                    objAnim.visible = attrs[1];
+                    break;
+
+                case "RunAnimation":
+                    var objAnim = currentAnimationInstanceList[par01];
+                    objAnim.run();
+                    break;
+
                 case "RevealLayer":
-                    RevealLayer(attrs[0]);
+                    RevealLayer(par01);
                     break;
 
                 case "ResetCanvas":
@@ -667,11 +687,22 @@ function ReadSettings() {
 }
 
 function ParseAndApplySettings(result) {
-    var objInp = JSON.parse(result);
+    currentLayerList = [];
+    currentAnimationList = [];
+    currentAnimationInstanceList = [];
+    currentRevealList = [];
+    currentLayerEdit = null;
+    currentSelectedRevealItem = null;
+    createMapRevealEnabled = false;
+    currentAnimationInstance = null;
+    currentAnimationInstanceIndex = null;
+    currentSelectedAnimation = null;
+    currentSelectedAnimationIdx = null;
+    parallaxBack = null;
 
+    var objInp = CurrentOpenedSettings = JSON.parse(result);
     currentX = objInp.PX;
     currentY = objInp.PY;
-
     $("#numBox").val(objInp.Box);
     $("#numCompX").val(objInp.X);
     $("#numCompY").val(objInp.Y);
@@ -679,8 +710,8 @@ function ParseAndApplySettings(result) {
     $("#numColor").val(objInp.Color);
     $("#numGlobalShow").val(objInp.Fog ?? 0.0);
     $("#numColorBk").val(objInp.BackColor ?? "#000000");
-    $("#numColorMapReveal").val(objInp.RevealColor ?? "#ffffff"),
-        $("#chkHorizontal").prop("checked", objInp.R);
+    $("#numColorMapReveal").val(objInp.RevealColor ?? "#ffffff");
+    $("#chkHorizontal").prop("checked", objInp.R);
     $("#chkShowGrid").prop("checked", objInp.G);
     $("#chkShowCoords").prop("checked", (objInp.Coords ?? false));
 
@@ -701,52 +732,45 @@ function ParseAndApplySettings(result) {
 
     if (objInp.Layers) {
         var lstLayers = objInp.Layers = JSON.parse(objInp.Layers);
-        currentLayerList = [];
         var model = new ImageLayer();
         lstLayers.forEach((obj) => {
             var nLayer = CloneClassInstance(model, obj);
             nLayer.loadImage(nLayer.img);
             currentLayerList.push(nLayer);
         });
-        RefreshLayerList(false);
     }
+    RefreshLayerList(false);
 
     if (objInp.Animations) {
         var lstAnimations = objInp.Animations = JSON.parse(objInp.Animations);
-        currentAnimationList = [];
         var model = new ImageAnimation();
         lstAnimations.forEach((obj) => {
             var nAnimation = CloneClassInstance(model, obj);
             currentAnimationList.push(nAnimation);
         });
-        RefreshAnimationList(false);
     }
+    RefreshAnimationList(false);
 
     if (objInp.AnimInstances) {
         var lstAnimations = objInp.AnimInstances = JSON.parse(objInp.AnimInstances);
-        currentAnimationInstanceList = [];
         var model = new ImageAnimationInstance();
         lstAnimations.forEach((obj) => {
             var nAnimation = CloneClassInstance(model, obj);
-            nAnimation.img = null;
-            nAnimation.b64 = null;
-            nAnimation.frameTime = 0;
-            nAnimation.frameCount = 0;
+            nAnimation.resetImage();
             currentAnimationInstanceList.push(nAnimation);
         });
-        RefreshAnimationInstanceList(false);
     }
+    RefreshAnimationInstanceList(false);
 
     if (objInp.Reveals) {
         var lstReveals = objInp.Reveals = JSON.parse(objInp.Reveals);
-        currentRevealList = [];
         var model = new MapReveal();
         lstReveals.forEach((obj) => {
             var nLayer = CloneClassInstance(model, obj);
             currentRevealList.push(nLayer);
         });
-        RefreshMapRevealList(false);
     }
+    RefreshMapRevealList(false);
 
     currentImg.onload = function () {
         InvokeConfigOnSettingsWindow("LoadSettings", [objInp]);
@@ -782,10 +806,10 @@ function CalcProportion(prop, val, newProp) {
     return Math.floor(parseFloat((val * prop) / newProp));
 }
 
-function CreateToggle(id, target, checked, onclick, noTitle, yesTitle) {
+function CreateToggle(id, target, checked, onclick, noTitle, yesTitle, cssClass = "") {
     var isCheck = checked ? `checked="checked"` : "";
     var hvOnClick = onclick ? `onclick="${onclick}"` : "";
-    var html = `<label class="mc-toggle-switch">
+    var html = `<label class="mc-toggle-switch ${cssClass}">
         <input class="mc-ts-check" type="checkbox" id="${id}" ${isCheck} ${hvOnClick} />
         <span class="mc-ts-slider round">
         </span>
@@ -811,7 +835,7 @@ function CreateToggles() {
     CreateToggle("chkShowLayerOverlay", "tdShowLayerOverlay", false, "UpdateSelectedLayer()", "Hide Overlay", "Show Overlay");
     CreateToggle("chkShowLayer", "tdShowLayer", true, "UpdateSelectedLayer()", "Hide Layer", "Show Layer");
     //Settings
-    CreateToggle("chkShowGrid", "divShowGrid", true, "", "Hide Grid", "Show Grid");
+    CreateToggle("chkShowGrid", "divShowGrid", false, "", "Hide Grid", "Show Grid");
     CreateToggle("chkHorizontal", "divHorizontal", false, "", "Backgrnd Original", "Backgrnd Rotated");
     CreateToggle("chkShowCoords", "divShowCoords", false, "", "Hide Coordinates", "Show Coordinates");
     //Parallax
@@ -819,6 +843,9 @@ function CreateToggles() {
     CreateToggle("chkParallaxRtl", "divParallaxRtl", false, "", "Left to Right", "Right to Left");
     CreateToggle("chkParallaxVertical", "divParallaxVertical", false, "", "Horizontal", "Vertical");
     CreateToggle("chkParallaxStretch", "divParallaxStretch", false, "", "Resize To Fit", "Default");
+    //Animation
+    CreateToggle("chkAnimationLoop", "divAnimationLoop", false, "UpdateAnimationInstance()", "On Loop", "On Demand", "min-label");
+
 }
 
 function CalculateDeltaSecs() {
@@ -927,3 +954,19 @@ function GenerateGUID() {
     });
     return uuid.toUpperCase();
 };
+
+function StepXY(x, y, ctrlX, ctrlY) {
+    var numBox = getInt("numBox");
+    var numLayerX = getInt(ctrlX) + (numBox * x);
+    var numLayerY = getInt(ctrlY) + (numBox * y);
+    $(`#${ctrlX}`).val(numLayerX);
+    $(`#${ctrlY}`).val(numLayerY);
+}
+
+function StepBackground(x, y) {
+    StepXY(x, y, "numCompX", "numCompY");
+}
+
+function StepParallax(x, y) {
+    StepXY(x, y, "numParallaxX", "numParallaxY");
+}

@@ -11,12 +11,12 @@
     <link rel="stylesheet" href="css/common.css?1" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?6"></script>
-    <script type="text/javascript" src="js/classes.js?4"></script>
+    <script type="text/javascript" src="js/common.js?7"></script>
+    <script type="text/javascript" src="js/classes.js?5"></script>
 
-    <script type="text/javascript" src="js/common-layer.js"></script>
-    <script type="text/javascript" src="js/common-reveal.js"></script>
-    <script type="text/javascript" src="js/common-animation.js?1"></script>
+    <script type="text/javascript" src="js/common-layer.js?2"></script>
+    <script type="text/javascript" src="js/common-reveal.js?2"></script>
+    <script type="text/javascript" src="js/common-animation.js?2"></script>
 
     <style type="text/css">
         @media screen and (min-width: 1300px) {
@@ -137,9 +137,9 @@
                 });
             }
 
-            currentAnimationInstanceList.forEach((instance) => {
+            currentAnimationInstanceList.forEach((instance, idx) => {
                 var delta = DeltaSeconds / 1000;
-                instance.draw(canvasCtx, delta);
+                instance.draw(canvasCtx, delta); //, currX, currY);
             });
 
             //Reveals
@@ -366,14 +366,14 @@
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(11)">
                 <i class="glyphicon glyp-adj glyphicon-arrow-right"></i>
             </a>
-            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(0)">BX+</a>
+            <!--<a class="btn btn-default btnl-lg" onclick="ExecuteCommand(0)">BX+</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(1)">BX-</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(2)">ZM+</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(3)">ZM-</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(4)">CX+</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(5)">CX-</a>
             <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(6)">CY+</a>
-            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(7)">CY-</a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(7)">CY-</a>-->
         </div>
     </div>
 
@@ -439,7 +439,7 @@
                         <tr>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Name:</span>
+                                    <span class="input-group-addon addon-74p">Name:</span>
                                     <input type="text" class="form-control input-sm" id="txtEventName" />
                                 </div>
                             </td>
@@ -455,7 +455,7 @@
                                     <tr>
                                         <td style="width: 170px;">
                                             <div class="input-group input-group-sm">
-                                                <span class="input-group-addon" style="font-weight: bold">Type:</span>
+                                                <span class="input-group-addon">Type:</span>
                                                 <select id="ddlActionType" class="form-control input-sm" onchange="ConfigureActionControls()">
                                                     <option value="move">Move Scene</option>
                                                     <option value="fog">Change Fog</option>
@@ -467,7 +467,7 @@
                                         <td style="width: 8px">&nbsp;</td>
                                         <td style="width: 170px">
                                             <div class="input-group input-group-sm">
-                                                <span class="input-group-addon" style="font-weight: bold">Direction:</span>
+                                                <span class="input-group-addon">Direction:</span>
                                                 <select id="ddlActionDirection" class="form-control input-sm">
                                                     <option value="n">None</option>
                                                     <option value="l">To Left</option>
@@ -492,7 +492,7 @@
                                     <tr>
                                         <td style="width: 130px">
                                             <div class="input-group input-group-sm">
-                                                <span class="input-group-addon" style="font-weight: bold">Value:</span>
+                                                <span class="input-group-addon">Value:</span>
                                                 <input type="number" class="form-control input-sm" min="0" step="1" id="numActionValue" value="1" />
                                             </div>
                                         </td>
@@ -508,7 +508,7 @@
                                         <td style="width: 8px">&nbsp;</td>
                                         <td>
                                             <div class="input-group input-group-sm">
-                                                <span class="input-group-addon" style="font-weight: bold">Time:</span>
+                                                <span class="input-group-addon">Time:</span>
                                                 <input type="number" class="form-control input-sm" min="0" max="3" step="0.01" id="numActionTime" value="0.5" />
                                             </div>
                                         </td>
@@ -615,8 +615,8 @@
                                         <a class="btn btn-default" onclick="AddAnimation()" title="Add Animation">
                                             <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
                                         </a>
-                                        <a class="btn btn-default" onclick="EditAnimation()" title="Edit Animation">
-                                            <i class="glyphicon glyphicon-pencil"></i>&nbsp;Edt
+                                        <a class="btn btn-default" onclick="CloneAnimation()" title="Clone Animation">
+                                            <i class="glyphicon glyphicon-copy"></i>&nbsp;Cln
                                         </a>
                                         <a class="btn btn-default" onclick="DeleteAnimation()" title="Delete Animation">
                                             <i class="glyphicon glyphicon-remove"></i>&nbsp;Del
@@ -629,21 +629,24 @@
                     <table style="width: 100%">
                         <tr>
                             <td>
-                                <select multiple id="lstAnimations" class="form-control input-sm" style="height: 100px;"></select>
+                                <select multiple id="lstAnimations" class="form-control input-sm" style="height: 100px;" ondblclick="EditAnimation()"></select>
                             </td>
                         </tr>
                     </table>
                     <table style="width: 100%;margin-top: 4px">
                         <tr>
-                            <td><label class="lbl-header" style="margin-top: 8px;">Animation Instances</label></td>
+                            <td><label class="lbl-header" style="margin-top: 8px;">Anim. Instances</label></td>
                             <td style="text-align: right; vertical-align: baseline;">
                                 <div class="input-group input-group-sm">
                                     <div class="input-group-btn">
                                         <a class="btn btn-default" onclick="AddAnimationInstance()" title="Add Animation Instance">
                                             <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
                                         </a>
-                                        <a class="btn btn-default" onclick="EditAnimationInstance()" title="Edit Animation Instance">
-                                            <i class="glyphicon glyphicon-pencil"></i>&nbsp;Edt
+                                        <a class="btn btn-default" onclick="CloneAnimationInstance()" title="Clone Animation Instance">
+                                            <i class="glyphicon glyphicon-copy"></i>&nbsp;Cln
+                                        </a>
+                                        <a class="btn btn-default" onclick="PlayAnimationInstance()" title="Play Animation Instance">
+                                            <i class="glyphicon glyphicon-play"></i>&nbsp;Play
                                         </a>
                                         <a class="btn btn-default" onclick="DeleteAnimationInstance()" title="Delete Animation Instance">
                                             <i class="glyphicon glyphicon-remove"></i>&nbsp;Del
@@ -654,7 +657,7 @@
                         </tr>
                         <tr>
                             <td colspan="3">
-                                <select multiple id="lstAnimationInstances" class="form-control input-sm" style="height: 100px;"></select>
+                                <select multiple id="lstAnimationInstances" class="form-control input-sm" style="height: 100px;" ondblclick="EditAnimationInstance()"></select>
                             </td>
                         </tr>
                     </table>
@@ -663,7 +666,7 @@
             <tr>
                 <td colspan="3">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Name:</span>
+                        <span class="input-group-addon addon-74p">Name:</span>
                         <input type="text" class="form-control input-sm" id="txtAnimName" onblur="UpdateAnimationInstance()" />
                     </div>
                 </td>
@@ -671,15 +674,27 @@
             <tr>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
+                        <span class="input-group-addon addon-74p" style="font-weight: bold">Resize:</span>
+                        <input type="number" class="form-control input-sm" id="numImageResize" min="0.1" step=".01" value="1" onblur="UpdateAnimationInstance()" />
+                    </div>
+                </td>
+                <td></td>
+                <td>
+                    <div id="divAnimationLoop"></div>
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p">Opacity:</span>
                         <input type="number" class="form-control input-sm" min="0.01" max="1" step=".01" id="numAnimOp" value="1" onblur="UpdateAnimationInstance()" />
                     </div>
                 </td>
                 <td></td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Flip:</span>
-                        <select class="form-control input-sm" id="lstFlipAnim"  onchange="UpdateAnimationInstance()">
+                        <span class="input-group-addon addon-74p">Flip:</span>
+                        <select class="form-control input-sm" id="lstFlipAnim" onchange="UpdateAnimationInstance()">
                             <option value="0">None</option>
                             <option value="1">Horizontal</option>
                             <option value="2">Vertical</option>
@@ -691,7 +706,7 @@
             <tr>
                 <td style="width: 170px">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Step X:</span>
+                        <span class="input-group-addon addon-74p">Step X:</span>
                         <div class="input-group-btn">
                             <a class="btn btn-default" onclick="StepAnimationInstance(-1, 0)" title="Step Minus X">
                                 <i class="glyphicon glyphicon-triangle-left icon-adj"></i>
@@ -706,7 +721,7 @@
                 <td style="width: 8px">&nbsp;</td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Step Y:</span>
+                        <span class="input-group-addon addon-74p">Step Y:</span>
                         <div class="input-group-btn">
                             <a class="btn btn-default" onclick="StepAnimationInstance(0, 1)" title="Step Minus Y">
                                 <i class="glyphicon glyphicon-triangle-bottom icon-adj"></i>
@@ -722,17 +737,17 @@
             <tr>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">X:</span>
-                        <input type="number" class="form-control input-sm" min="-960" step="1" 
-                               id="numAnimationX" value="0" onblur="UpdateAnimationInstance()" />
+                        <span class="input-group-addon addon-74p">X:</span>
+                        <input type="number" class="form-control input-sm" min="-960" step="1"
+                               id="numAnimationX" value="0" onblur="UpdateAnimationInstance()" oninput="UpdateAnimationInstance()" />
                     </div>
                 </td>
                 <td style="width: 8px">&nbsp;</td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Y:</span>
-                        <input type="number" class="form-control input-sm" min="-960" step="1" 
-                               id="numAnimationY" value="0" onblur="UpdateAnimationInstance()" />
+                        <span class="input-group-addon addon-74p">Y:</span>
+                        <input type="number" class="form-control input-sm" min="-960" step="1"
+                               id="numAnimationY" value="0" onblur="UpdateAnimationInstance()" oninput="UpdateAnimationInstance()" />
                     </div>
                 </td>
             </tr>
@@ -747,7 +762,7 @@
             <tr>
                 <td style="text-align: right">
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold" title="Reveal Items Color">Color:</span>
+                        <span class="input-group-addon addon-60p" title="Reveal Items Color">Color:</span>
                         <input type="color" class="form-control input-sm" id="numColorMapReveal" value="#ffffff" />
                         <div class="input-group-btn">
                             <a class="btn btn-default" onclick="AddRevealItem()" title="Add Item">
@@ -872,7 +887,7 @@
                         <tr>
                             <td colspan="3">
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Name:</span>
+                                    <span class="input-group-addon addon-74p">Name:</span>
                                     <input type="text" class="form-control input-sm" id="txtLayerName" onblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
@@ -882,7 +897,7 @@
                         <tr>
                             <td style="width: 170px">
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Step X:</span>
+                                    <span class="input-group-addon addon-74p">Step X:</span>
                                     <div class="input-group-btn">
                                         <a class="btn btn-default" onclick="StepCurrentLayer(-1, 0)" title="Step Minus X">
                                             <i class="glyphicon glyphicon-triangle-left icon-adj"></i>
@@ -897,7 +912,7 @@
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Step Y:</span>
+                                    <span class="input-group-addon addon-74p">Step Y:</span>
                                     <div class="input-group-btn">
                                         <a class="btn btn-default" onclick="StepCurrentLayer(0, 1)" title="Step Minus Y">
                                             <i class="glyphicon glyphicon-triangle-bottom icon-adj"></i>
@@ -913,14 +928,14 @@
                         <tr>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">X:</span>
+                                    <span class="input-group-addon addon-74p">X:</span>
                                     <input type="number" class="form-control input-sm" min="-960" step="1" id="numLayerX" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Y:</span>
+                                    <span class="input-group-addon addon-74p">Y:</span>
                                     <input type="number" class="form-control input-sm" min="-960" step="1" id="numLayerY" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
@@ -928,14 +943,14 @@
                         <tr>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Width:</span>
+                                    <span class="input-group-addon addon-74p">Width:</span>
                                     <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerW" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Height:</span>
+                                    <span class="input-group-addon addon-74p">Height:</span>
                                     <input type="number" class="form-control input-sm" min="0" step="1" id="numLayerH" value="0" lazyblur="UpdateSelectedLayer()" />
                                 </div>
                             </td>
@@ -943,7 +958,7 @@
                         <tr>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
+                                    <span class="input-group-addon addon-74p">Opacity:</span>
                                     <div class="form-control input-sm">
                                         <input type="range" min="0" max="1" step="0.1" id="numLayerOp" value="1" oninput="UpdateSelectedLayer()" />
                                     </div>
@@ -952,7 +967,7 @@
                             <td style="width: 8px">&nbsp;</td>
                             <td>
                                 <div class="input-group input-group-sm">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">Flip:</span>
+                                    <span class="input-group-addon addon-74p">Flip:</span>
                                     <select class="form-control input-sm" id="lstFlipLayer" onchange="UpdateSelectedLayer()">
                                         <option value="0">None</option>
                                         <option value="1">Horizontal</option>
@@ -969,7 +984,7 @@
                             <td style="width: 8px">&nbsp;</td>
                             <td style="text-align: right; vertical-align: baseline; ">
                                 <div class="input-group input-group-sm" title="Overlay Opacity">
-                                    <span class="input-group-addon addon-74p" style="font-weight: bold">O.Opacity:</span>
+                                    <span class="input-group-addon addon-74p">O.Opacity:</span>
                                     <div class="form-control input-sm">
                                         <input type="range" min="0" max="1" step="0.1" id="numLayerOverlayOp" value="1" oninput="UpdateSelectedLayer()" />
                                     </div>
@@ -983,7 +998,7 @@
                             <td style="width: 8px">&nbsp;</td>
                             <td style="vertical-align: baseline;">
                                 <div class="input-group input-group-sm" title="Overlay Color">
-                                    <span class="input-group-addon addon-60p" style="font-weight: bold">O.Color:</span>
+                                    <span class="input-group-addon addon-60p">O.Color:</span>
                                     <input type="color" class="form-control input-sm" id="numColorLayerOverlay" value="#000000" oninput="UpdateSelectedLayer()" />
                                 </div>
                             </td>
@@ -1002,7 +1017,7 @@
             <tr>
                 <td style="width: 50%">
                     <div class="input-group input-group-sm" title="Global Show" style="margin-bottom: 3px">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Fog:</span>
+                        <span class="input-group-addon addon-74p">Fog:</span>
                         <div class="form-control input-sm">
                             <input type="range" min="0" max="1" step="0.1" id="numGlobalShow" value="0" />
                         </div>
@@ -1033,10 +1048,13 @@
             </tr>
             <tr>
                 <td>
-                    <div class="input-group input-group-sm" style="margin-bottom: 5px">
+                    <div class="input-group input-group-sm" style="margin-bottom: 3px">
                         <div class="input-group-btn">
-                            <a class="btn btn-default" style="width: 100%" onclick="ResetAdjusts()" title="Reset">
-                                <i class="glyphicon glyphicon-refresh"></i>&nbsp;Reset Settings
+                            <a class="btn btn-default" onclick="ClearBackground()" title="Clear Background">
+                                Clear Back
+                            </a>
+                            <a class="btn btn-default" onclick="ClearParallax()" title="Clear Parallax">
+                                Clear Parallax
                             </a>
                         </div>
                     </div>
@@ -1049,14 +1067,14 @@
             <tr>
                 <td>
                     <div class="input-group input-group-sm" title="Background Color">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">BC:</span>
+                        <span class="input-group-addon addon-60p">BC:</span>
                         <input type="color" class="form-control input-sm" id="numColorBk" value="#000000" />
                     </div>
                 </td>
                 <td></td>
                 <td>
                     <div class="input-group input-group-sm" title="Grid Color">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">GC:</span>
+                        <span class="input-group-addon addon-60p">GC:</span>
                         <input type="color" class="form-control input-sm" id="numColor" value="#ff0000" />
                     </div>
                 </td>
@@ -1064,7 +1082,7 @@
             <tr>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">Box:</span>
+                        <span class="input-group-addon addon-60p">Box:</span>
                         <input type="number" class="form-control input-sm" min="48" max="128" step="1" id="numBox" value="96" />
                         <div class="input-group-btn">
                             <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false"><span class="caret"></span></button>
@@ -1079,22 +1097,53 @@
                 <td></td>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">Zoom:</span>
+                        <span class="input-group-addon addon-60p">Zoom:</span>
                         <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numCompZ" value="1" onchange="SetCanvasZoom()" pattern="^\d*(\.\d{0,2})?$" />
                     </div>
                 </td>
             </tr>
             <tr>
                 <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p">Step X:</span>
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="StepBackground(-1, 0)" title="Step Minus X">
+                                <i class="glyphicon glyphicon-triangle-left icon-adj"></i>
+                            </a>
+                            <a class="btn btn-default" onclick="StepBackground(1, 0)" title="Step Plus X">
+                                <i class="glyphicon glyphicon-triangle-right icon-adj"></i>
+                            </a>
+                        </div>
+                        <div class="form-control input-sm"></div>
+                    </div>
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p">Step Y:</span>
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="StepBackground(0, 1)" title="Step Minus Y">
+                                <i class="glyphicon glyphicon-triangle-bottom icon-adj"></i>
+                            </a>
+                            <a class="btn btn-default" onclick="StepBackground(0, -1)" title="Step Plus Y">
+                                <i class="glyphicon glyphicon-triangle-top icon-adj"></i>
+                            </a>
+                        </div>
+                        <div class="form-control input-sm"></div>
+                    </div>
+                </td>
+            </tr>
+            <tr>
+                <td>
                     <div class="input-group input-group-sm" title="Background Complement X">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
+                        <span class="input-group-addon addon-60p">CX:</span>
                         <input type="number" class="form-control input-sm" min="-9600" max="9600" id="numCompX" value="0" />
                     </div>
                 </td>
                 <td></td>
                 <td>
                     <div class="input-group input-group-sm" title="Background Complement Y">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
+                        <span class="input-group-addon addon-60p">CY:</span>
                         <input type="number" class="form-control input-sm" min="-9600" max="9600" id="numCompY" value="0" />
                     </div>
                 </td>
@@ -1118,32 +1167,64 @@
             <tr>
                 <td>
                     <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">Speed:</span>
+                        <span class="input-group-addon addon-74p">Speed:</span>
                         <input type="number" class="form-control input-sm" min="-5" max="5" step=".01" id="numkParallaxSpeed" value="2" />
                     </div>
                 </td>
                 <td></td>
                 <td>
-                    <div class="input-group input-group-sm" title="Parallax Complement X">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">CX:</span>
-                        <input type="number" class="form-control input-sm" min="-9600" max="9600" id="numParallaxX" value="0" />
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p">Opacity:</span>
+                        <div class="form-control input-sm">
+                            <input type="range" min="0" max="1" step="0.1" id="numParallaxOp" value="1" />
+                        </div>
+                    </div>
+
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p">Step X:</span>
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="StepParallax(-1, 0)" title="Step Minus X">
+                                <i class="glyphicon glyphicon-triangle-left icon-adj"></i>
+                            </a>
+                            <a class="btn btn-default" onclick="StepParallax(1, 0)" title="Step Plus X">
+                                <i class="glyphicon glyphicon-triangle-right icon-adj"></i>
+                            </a>
+                        </div>
+                        <div class="form-control input-sm"></div>
+                    </div>
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-addon addon-74p">Step Y:</span>
+                        <div class="input-group-btn">
+                            <a class="btn btn-default" onclick="StepParallax(0, 1)" title="Step Minus Y">
+                                <i class="glyphicon glyphicon-triangle-bottom icon-adj"></i>
+                            </a>
+                            <a class="btn btn-default" onclick="StepParallax(0, -1)" title="Step Plus Y">
+                                <i class="glyphicon glyphicon-triangle-top icon-adj"></i>
+                            </a>
+                        </div>
+                        <div class="form-control input-sm"></div>
                     </div>
                 </td>
             </tr>
             <tr>
                 <td>
-                    <div class="input-group input-group-sm" title="Parallax Complement Y">
-                        <span class="input-group-addon addon-60p" style="font-weight: bold">CY:</span>
-                        <input type="number" class="form-control input-sm" min="-9600" max="9600" id="numParallaxY" value="0" />
+                    <div class="input-group input-group-sm" title="Parallax Complement X">
+                        <span class="input-group-addon addon-74p">CX:</span>
+                        <input type="number" class="form-control input-sm" min="-9600" max="9600" id="numParallaxX" value="0" />
                     </div>
                 </td>
                 <td></td>
                 <td>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-addon addon-74p" style="font-weight: bold">Opacity:</span>
-                        <div class="form-control input-sm">
-                            <input type="range" min="0" max="1" step="0.1" id="numParallaxOp" value="1" />
-                        </div>
+                    <div class="input-group input-group-sm" title="Parallax Complement Y">
+                        <span class="input-group-addon addon-74p">CY:</span>
+                        <input type="number" class="form-control input-sm" min="-9600" max="9600" id="numParallaxY" value="0" />
                     </div>
                 </td>
             </tr>

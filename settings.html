@@ -53,6 +53,14 @@
             SendToParent("UpdateLayer", [idx, chkVal(chkLayer), chkVal(chkOverlay)]);
         }
 
+        function SetAnimation(idx, chk) {
+            SendToParent("SetAnimation", [idx, chkVal(chk)]);
+        }
+
+        function RunAnimation(idx) {
+            SendToParent("RunAnimation", [idx]);
+        }
+
         function SetReveal(idx, chk) {
             SendToParent("UpdateReveal", [idx, chkVal(chk)]);
         }
@@ -97,6 +105,20 @@
                     </tr>`;
                 });
                 $("#tbReveals").html(tbHtml);
+            }
+
+            if (objInp.AnimInstances) {
+                var tbHtml = ``;
+                objInp.AnimInstances.forEach((obj, idx) => {
+                    tbHtml += `<tr>
+                        <td style="padding-left: 5px;font-weight: bold">${obj.name}</td>
+                        <td style="text-align: center;"><input type="checkbox" ${(obj.visible ? "checked" : "")} ${(obj.runOnce ? "disabled" : "")}
+                            id="chkAnimation${idx}" name="chkAnimation" onclick="SetAnimation('${idx}', 'chkAnimation${idx}')" /></td>
+                        <td style="text-align: center;"><input type="button" class="btn btn-success btn-sm ${(obj.runOnce ? "" : "disabled")}" value="Run"
+                            id="btnRunAnimation${idx}" onclick="RunAnimation('${idx}')" /></td>
+                    </tr>`;
+                });
+                $("#tbAnimations").html(tbHtml);
             }
         }
 
@@ -151,6 +173,10 @@
             SendToParent("ChangeFog", [stsVal]);
         }
 
+        function ReloadSettings() {
+            SendToParent("ReloadSettings", []);
+        }
+
         function ReadSettings() {
             if (HasOpenFilePicker()) {
                 OpenJsonFile((result) => {
@@ -159,6 +185,11 @@
                 return;
             }
             alert("Open File Unavailable");
+        }
+
+        function CheckAllAnimations(check) {
+            var isCheck = check.checked;
+            $('[name="chkAnimation"]').prop("checked", isCheck).trigger("click");
         }
     </script>
     <style type="text/css">
@@ -171,14 +202,16 @@
 </head>
 <body>
     <div>
+
         <ul class="nav nav-tabs" role="tablist">
-            <li role="presentation" class="active"><a href="#home" aria-controls="home" role="tab" data-toggle="tab">Settings</a></li>
-            <li role="presentation"><a href="#profile" aria-controls="profile" role="tab" data-toggle="tab">Layers</a></li>
-            <li role="presentation"><a href="#messages" aria-controls="messages" role="tab" data-toggle="tab">Map Reveals</a></li>
-            <li role="presentation"><a href="#settings" aria-controls="settings" role="tab" data-toggle="tab">Animations</a></li>
+            <li role="presentation"><a onclick="ReloadSettings()">Reload</a></li>
+            <li role="presentation" class="active"><a href="#tab001" aria-controls="tab001" role="tab" data-toggle="tab">Settings</a></li>
+            <li role="presentation"><a href="#tab002" aria-controls="tab002" role="tab" data-toggle="tab">Layers</a></li>
+            <li role="presentation"><a href="#tab003" aria-controls="tab003" role="tab" data-toggle="tab">Map Reveals</a></li>
+            <li role="presentation"><a href="#tab004" aria-controls="tab004" role="tab" data-toggle="tab">Animations</a></li>
         </ul>
         <div class="tab-content">
-            <div role="tabpanel" class="tab-pane active" id="home" style="padding: 8px">
+            <div role="tabpanel" class="tab-pane active" id="tab001" style="padding: 8px">
                 <table style="width: 100%;">
                     <tr>
                         <td style="width: 50px;vertical-align: top">
@@ -230,7 +263,7 @@
                     </tr>
                 </table>
             </div>
-            <div role="tabpanel" class="tab-pane" id="profile">
+            <div role="tabpanel" class="tab-pane" id="tab002">
                 <div class="reveal-panel">
                     <table style="width: calc(100% - 10px);margin: 5px 0 0  5px" border="1">
                         <thead>
@@ -245,7 +278,7 @@
                     </table>
                 </div>
             </div>
-            <div role="tabpanel" class="tab-pane" id="messages">
+            <div role="tabpanel" class="tab-pane" id="tab003">
                 <div class="reveal-panel">
                     <table style="width: calc(100% - 10px);margin: 5px 0 0  5px" border="1">
                         <thead>
@@ -258,9 +291,22 @@
                     </table>
                 </div>
             </div>
-            <div role="tabpanel" class="tab-pane" id="settings">
+            <div role="tabpanel" class="tab-pane" id="tab004">
                 <div class="reveal-panel">
-
+                    <table style="width: calc(100% - 10px);margin: 5px 0 0  5px" border="1">
+                        <thead>
+                            <tr>
+                                <th style="padding-left: 5px">Animation</th>
+                                <th style="width: 65px; text-align: center">
+                                    <label style="margin-bottom: 0 !important;">
+                                        <input type="checkbox" style="margin-top: 0px;" onclick="CheckAllAnimations(this)" />&nbsp;<span>Show</span>
+                                    </label>
+                                </th>
+                                <th style="width: 65px; text-align: center"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="tbAnimations"></tbody>
+                    </table>
                 </div>
             </div>
         </div>

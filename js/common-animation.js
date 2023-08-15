@@ -90,6 +90,13 @@ function AddAnimationInstance() {
     newInstance.cloneFromAnimation(animation, numInstances);
     currentAnimationInstanceList.push(newInstance);
     RefreshAnimationInstanceList(false);
+    ResetFrameAnimationInstanceList();
+}
+
+function ResetFrameAnimationInstanceList() {
+    currentAnimationInstanceList.forEach((obj) => {
+        obj.resetImage();
+    });
 }
 
 function RefreshAnimationInstanceList(keepSelection = true) {
@@ -106,11 +113,7 @@ function GetCurrentAnimationInstance() {
 function StepAnimationInstance(x, y) {
     var inst = currentAnimationInstance;
     if (!inst) return;
-    var numBox = getInt("numBox");
-    var numLayerX = getInt("numAnimationX") + (numBox * x);
-    var numLayerY = getInt("numAnimationY") + (numBox * y);
-    $("#numAnimationX").val(numLayerX);
-    $("#numAnimationY").val(numLayerY);
+    StepXY(x, y, "numAnimationX", "numAnimationY");
     UpdateAnimationInstance();
 }
 
@@ -121,10 +124,29 @@ function EditAnimationInstance() {
     $("#lstFlipAnim").val(inst.flipType);
     $("#numAnimationX").val(inst.posx);
     $("#numAnimationY").val(inst.posy);
+    $("#numImageResize").val(inst.frameZoom);
+    $("#chkAnimationLoop").prop("checked", inst.runOnce);
 }
 
 function DeleteAnimationInstance() {
-
+    var layer = GetCurrentAnimationInstance();
+    if (!layer) return;
+    var del = confirm("Really want to delete this Instance?");
+    if (!del) return;
+    var idx = currentAnimationInstanceIndex;
+    currentAnimationInstanceList.splice(idx, 1);
+    var lstLayers = $("#lstAnimationInstances")[0];
+    var opt = lstLayers.options[idx1];
+    lstLayers.removeChild(opt);
+    $("#txtAnimName").val("");
+    $("#numAnimOp").val(1);
+    $("#numImageResize").val(1);
+    $("#lstFlipAnim").val(0);
+    $("#numAnimationX").val(0);
+    $("#numAnimationY").val(0);
+    $("#chkAnimationLoop").prop("checked", false);
+    currentAnimationInstanceIndex = null;
+    currentAnimationInstance = null;
 }
 
 function UpdateAnimationInstance() {
@@ -135,5 +157,42 @@ function UpdateAnimationInstance() {
     inst.flipType = getInt("lstFlipAnim");
     inst.posx = getInt("numAnimationX");
     inst.posy = getInt("numAnimationY");
+    inst.runOnce = chkVal("chkAnimationLoop");
+    inst.frameZoom = getFloat("numImageResize");
+    if (inst.runOnce) {
+        inst.reset();
+    } else {
+        inst.run();
+        ResetFrameAnimationInstanceList();
+    }
     RefreshAnimationInstanceList(true);
+}
+
+function CloneAnimation() {
+    var layer = GetSelectedAnimation();
+    if (!layer) return;
+    var clone = confirm("Really want to clone this Animation?");
+    if (!clone) return;
+    var newLayer = CloneClassInstance(layer, layer);
+    newLayer.name = "Clone - " + newLayer.name;
+    currentAnimationList.push(newLayer);
+    UpdateAnimationIndex();
+    RefreshAnimationList(false);
+}
+
+function CloneAnimationInstance() {
+    var layer = GetCurrentAnimationInstance();
+    if (!layer) return;
+    var clone = confirm("Really want to clone this Animation Instance?");
+    if (!clone) return;
+    var newLayer = CloneClassInstance(layer, layer);
+    newLayer.name = "Clone - " + newLayer.name;
+    currentAnimationInstanceList.push(newLayer);
+    RefreshAnimationInstanceList(false);
+}
+
+function PlayAnimationInstance() {
+    var inst = currentAnimationInstance;
+    if (!inst) return;
+    inst.run();
 }
