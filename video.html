@@ -13,10 +13,172 @@
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
     <script type="text/javascript" src="js/common.js?2"></script>
     <script type="text/javascript" src="js/classes.js?1"></script>
+
+    <script type="text/javascript">
+        var overCanvas = null;
+        var overCanvasCtx = null;
+        var videoObj = null;
+        var videoPosition = {
+            x: 0,
+            y: 0,
+            ow: 0,
+            oh: 0,
+            w: 0,
+            h: 0,
+            ratio: 0,
+
+        };
+
+        $(document).ready(() => {
+            videoObj = $("#videoPrincipal")[0];
+            videoObj.addEventListener("loadedmetadata", function (e) {
+                var h = videoPosition.oh = this.videoHeight;
+                var w = videoPosition.ow = this.videoWidth;
+                var max = h > w ? h : w;
+                var min = h > w ? w : h;
+                var ratio = parseFloat(parseFloat(min) / parseFloat(max));
+                videoPosition.ratio = Math.round(ratio * 100.0, 2) / 100.0
+            });
+
+            overCanvas = document.getElementById("overCanvas");
+            overCanvasCtx = overCanvas.getContext("2d");
+            overCanvasCtx.canvas.width = window.innerWidth;
+            overCanvasCtx.canvas.height = window.innerHeight;
+            setTimeout(() => {
+                //RenderGridAndCoords(true, false);
+            }, 500);
+        });
+
+        function RenderGridAndCoords(grid, cord) {
+            var stepsV = (window.innerWidth / AMMOUNT) + 1;
+            var stepsH = (window.innerHeight / AMMOUNT) + 1;
+            overCanvasCtx.save();
+            if (grid) {
+                for (var i = 0; i < stepsV; i++) {
+                    if (i > 0) {
+                        var pos = (i * AMMOUNT) - 1;
+                        DrawVerLine(pos);
+                    }
+                }
+                for (var j = 0; j < stepsH; j++) {
+                    if (j > 0) {
+                        var pos = (j * AMMOUNT) - 1;
+                        DrawHorLine(pos);
+                    }
+                }
+            }
+            overCanvasCtx.restore();
+        }
+
+        function DrawHorLine(y) {
+            DrawLine(0, y, window.innerWidth, y);
+        }
+
+        function DrawVerLine(x) {
+            DrawLine(x, 0, x, window.innerHeight);
+        }
+
+        function DrawLine(x1, y1, x2, y2) {
+            with (overCanvasCtx) {
+                beginPath();
+                moveTo(x1, y1);
+                lineTo(x2, y2);
+                closePath();
+                lineWidth = 1;
+                strokeStyle = "red";
+                stroke();
+            }
+        }
+
+        function PlayVideo() {
+            if (videoObj.paused) {
+                videoObj.play();
+                return;
+            }
+            videoObj.pause();
+        }
+
+        function SetVideoPosition() {
+            var vp = videoPosition;
+            $(videoObj)
+                .css("left", `${vp.x}px`)
+                .css("top", `${vp.y}px`);
+            videoObj.width = `${vp.ow + vp.w}`;
+            videoObj.height = `${vp.oh + vp.h}`;
+        }
+
+        function ExecuteCommand(idx) {
+            switch (idx) {
+                case 8: //Up
+                    videoPosition.h -= AMMOUNT * videoPosition.ratio;
+                    videoPosition.w -= AMMOUNT;
+                    break;
+                case 9: //Dw
+                    videoPosition.h += AMMOUNT * videoPosition.ratio;
+                    videoPosition.w += AMMOUNT;
+                    break;
+                case 10: //Lf
+                    videoPosition.w -= AMMOUNT;
+                    break;
+                case 11: //Rt
+                    videoPosition.w += AMMOUNT;
+                    break;
+            }
+            SetVideoPosition();
+        }
+    </script>
+    <style type="text/css">
+        @media screen and (min-width: 1300px) {
+            .app-title {
+                display: block;
+            }
+        }
+
+        body {
+            background-color: #ddd;
+            margin: 0;
+            padding: 0;
+        }
+    </style>
 </head>
 <body>
-    <video loop muted autoplay="autoplay">
-        <source src="videos/City Streets 01-Nightime.mp4" type="video/mp4">
-    </video>
+    <div>
+        <table style="width: calc(100% - 10px); margin-top: 4px;">
+            <tr>
+                <td>
+                    <div class="app-title">Deploy Games Simple Virtual TableTop</div>
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td style="width: 158px">
+                </td>
+            </tr>
+        </table>
+    </div>
+    <div class="right-bar">
+        <div class="btn-group btn-group-vertical">
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(8)">
+                <i class="glyphicon glyp-adj glyphicon-arrow-up"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(9)">
+                <i class="glyphicon glyp-adj glyphicon-arrow-down"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(10)">
+                <i class="glyphicon glyp-adj glyphicon-arrow-left"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(11)">
+                <i class="glyphicon glyp-adj glyphicon-arrow-right"></i>
+            </a>
+            <a class="btn btn-default btnl-lg" onclick="PlayVideo()">
+                <i class="glyphicon glyp-adj glyphicon-play"></i>
+            </a>
+        </div>
+    </div>
+    <div class="content" style="overflow: hidden">
+        <video id="videoPrincipal" loop style="position: absolute; object-fit: cover;">
+            <source src="videos/Green Ocean.mp4" type="video/mp4">
+        </video>
+        <canvas id="overCanvas" style="width: calc(100%); height: calc(100%); position: absolute;">
+        </canvas>
+    </div>
 </body>
 </html>

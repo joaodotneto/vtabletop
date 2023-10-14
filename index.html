@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="css/common.css?1" />
     <script type="text/javascript" src="js/jquery.min.js?1"></script>
     <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?7"></script>
+    <script type="text/javascript" src="js/common.js?8"></script>
     <script type="text/javascript" src="js/classes.js?5"></script>
 
     <script type="text/javascript" src="js/common-layer.js?2"></script>
@@ -305,6 +305,23 @@
                     break;
             }
         }
+
+        var TremorTimes = 20;
+        var TremorInterval = 25;
+        var TremorDirection = 1;
+        var TremorIntensity = 2;
+        function ExecuteTremor() {
+            TremorTimes--;
+            if (TremorTimes <= 0) {
+                $("#baseCanvas").css("margin-left", "0");
+                TremorTimes = 20;
+                return;
+            }
+            TremorDirection = (TremorDirection * -1);
+            var tremorValue = `${(TremorIntensity * TremorDirection)}px`;
+            $("#baseCanvas").css("margin-left", tremorValue);
+            setTimeout(ExecuteTremor, TremorInterval);
+        }
     </script>
 </head>
 <body>
@@ -314,7 +331,7 @@
             <input type="file" id="uploadSettings" accept=".json" />
             <canvas id="saveCanvas"></canvas>
         </div>
-        <table style="width: calc(100% - 10px); margin-top: 4px; ">
+        <table style="width: calc(100% - 10px); margin-top: 4px;">
             <tr>
                 <td>
                     <div class="app-title">Deploy Games Simple Virtual TableTop</div>
@@ -323,6 +340,18 @@
                 <td style="width: 158px">
                     <div class="input-group input-group-sm">
                         <div class="input-group-btn">
+                            <div class="btn-group btn-group-sm">
+                                <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                    <i class="glyphicon glyphicon-save"></i>&nbsp;Save&nbsp;<span class="caret"></span>
+                                </button>
+                                <ul class="dropdown-menu" style="min-width: 120px !important; max-width: 120px !important; z-index: 2000">
+                                    <li><a onclick="WriteSettings(false)"><i class="glyphicon glyphicon-save"></i>&nbsp;Save</a></li>
+                                    <li><a onclick="WriteSettings(true)"><i class="glyphicon glyphicon-import"></i>&nbsp;Save As</a></li>
+                                </ul>
+                            </div>
+                            <a class="btn btn-default" onclick="ReadSettings()" title="Load Settings">
+                                <i class="glyphicon glyphicon-open"></i>&nbsp;Open
+                            </a>
                             <a class="btn btn-default" onclick="ExecuteCommand(12)" title="Settings">
                                 <i class="glyphicon glyphicon-cog"></i>&nbsp;Settings
                             </a>
@@ -339,12 +368,6 @@
                             </div>
                             <a class="btn btn-default" onclick="ShowSettingsWindow()" title="Control Panel">
                                 <i class="glyphicon glyphicon-th"></i>&nbsp;Control Panel
-                            </a>
-                            <a class="btn btn-default" onclick="WriteSettings()" title="Save Settings">
-                                <i class="glyphicon glyphicon-save"></i>&nbsp;Save
-                            </a>
-                            <a class="btn btn-default" onclick="ReadSettings()" title="Load Settings">
-                                <i class="glyphicon glyphicon-open"></i>&nbsp;Open
                             </a>
                         </div>
                     </div>
@@ -407,6 +430,10 @@
                     numActionTime.prop("disabled", true);
                     break;
             }
+        }
+
+        function AddEvent() {
+            $("#modalEvent").modal("show");
         }
     </script>
 
@@ -561,13 +588,13 @@
                             <td style="text-align: right; vertical-align: baseline;">
                                 <div class="input-group input-group-sm">
                                     <div class="input-group-btn">
-                                        <a class="btn btn-default" onclick="AddLayer()" title="Add Layer">
+                                        <a class="btn btn-default" onclick="AddEvent()" title="Add Event">
                                             <i class="glyphicon glyphicon-plus-sign"></i>&nbsp;Add
                                         </a>
-                                        <a class="btn btn-default" onclick="CloneLayer()" title="Clone Layer">
+                                        <a class="btn btn-default" onclick="CloneEvent()" title="Clone Event">
                                             <i class="glyphicon glyphicon-copy"></i>&nbsp;Cln
                                         </a>
-                                        <a class="btn btn-default" onclick="DeleteLayer()" title="Delete Layer">
+                                        <a class="btn btn-default" onclick="DeleteEvent()" title="Delete Event">
                                             <i class="glyphicon glyphicon-remove"></i>&nbsp;Del
                                         </a>
                                     </div>

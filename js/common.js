@@ -118,15 +118,22 @@ const OpenImageFile = async (callback) => {
     }
 };
 
-const SaveFile = async (blob) => {
+const SaveFile = async (saveAs, blob) => {
     try {
-        if (LastOpenedHandle == null) {
-            LastOpenedHandle = await window.showSaveFilePicker(FileOptions);
+        var openedHandle = null;
+        if (saveAs) {
+            openedHandle = await window.showSaveFilePicker(FileOptions);
+        } else {
+            if (LastOpenedHandle == null) {
+                openedHandle = LastOpenedHandle = await window.showSaveFilePicker(FileOptions);
+            } else {
+                openedHandle = LastOpenedHandle;
+            }
         }
-        var writable = await LastOpenedHandle.createWritable();
+        var writable = await openedHandle.createWritable();
         await writable.write(blob);
         await writable.close();
-        BootstrapFloatAlert.success(`File '${LastOpenedHandle.name}' saved Sucessfully!`, ".content");
+        BootstrapFloatAlert.success(`File '${openedHandle.name}' saved Sucessfully!`, ".content");
     } catch (err) {
         console.log(err.name, err.message);
     }
@@ -231,6 +238,10 @@ function ConfigureWindowMessage() {
                     parallaxBack = new ParallaxBackground();
                     parallaxBack.initialize(URL.createObjectURL(objParameters.file), ResetCanvas);
                     ResetCanvas();
+                    break;
+
+                case "ExecuteCommand":
+                    ExecuteCommand(parseInt(par01));
                     break;
             }
         }, 100);
@@ -616,7 +627,7 @@ function CloneClassInstance(model, instance) {
     return Object.assign(Object.create(Object.getPrototypeOf(model)), instance);
 }
 
-function WriteSettings() {
+function WriteSettings(saveAs = false) {
     var parsedLayers = [];
     currentLayerList.forEach((obj) => {
         var parsedLayer = CloneClassInstance(obj, obj);
@@ -657,7 +668,7 @@ function WriteSettings() {
     const link = document.createElement("a");
     const file = new Blob([strData], { type: 'text/plain' });
     if (HasSaveFilePicker()) {
-        SaveFile(file);
+        SaveFile(saveAs, file);
         return;
     }
     var newName = window.prompt("Map Name", lastSelectedFileName);

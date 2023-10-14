@@ -191,6 +191,10 @@
             var isCheck = check.checked;
             $('[name="chkAnimation"]').prop("checked", isCheck).trigger("click");
         }
+
+        function ExecuteCommand(cmd) {
+            SendToParent("ExecuteCommand", [cmd]);
+        }
     </script>
     <style type="text/css">
         .reveal-panel {
@@ -260,6 +264,24 @@
                         <td><div id="divShowAllLayer"></div></td>
                         <td><div id="divShowMapRevealNames"></div></td>
                         <td><div id="divShowAllMapReveal"></div></td>
+                    </tr>
+                    <tr>
+                        <td colspan="3">
+                            <div class="btn-group">
+                                <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(8)">
+                                    <i class="glyphicon glyp-adj glyphicon-arrow-up"></i>
+                                </a>
+                                <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(9)">
+                                    <i class="glyphicon glyp-adj glyphicon-arrow-down"></i>
+                                </a>
+                                <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(10)">
+                                    <i class="glyphicon glyp-adj glyphicon-arrow-left"></i>
+                                </a>
+                                <a class="btn btn-default btnl-lg" onclick="ExecuteCommand(11)">
+                                    <i class="glyphicon glyp-adj glyphicon-arrow-right"></i>
+                                </a>
+                            </div>
+                        </td>
                     </tr>
                 </table>
             </div>

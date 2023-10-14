@@ -5,6 +5,12 @@ Simple Virtual TableTop Display - [Demo Here](https://stingray-app-bkd5f.ondigit
 - Box Sizes (With Defaults);
 - Save / Load Config Files (AKA Projects);
 
+
+Update (13/10/2023):
+- Animations implemented;
+- External Control Panel implemented;
+- Video -> WIP;
+
 Update (14/08/2023):
 - Animations -> WIP;
 - Code review;
