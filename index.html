@@ -6,17 +6,36 @@
     <meta http-equiv="expires" content="0" />
     <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
     <meta http-equiv="pragma" content="no-cache" />
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
 
-    <link rel="stylesheet" href="css/bootstrap.min.css?1" />
-    <link rel="stylesheet" href="css/common.css?1" />
-    <script type="text/javascript" src="js/jquery.min.js?1"></script>
-    <script type="text/javascript" src="js/bootstrap.min.js?1"></script>
-    <script type="text/javascript" src="js/common.js?8"></script>
-    <script type="text/javascript" src="js/classes.js?5"></script>
+    <script type="text/javascript">
+        var version = new Date().toISOString();
+        var scripts = [
+            "common",
+            "classes",
+            "common-layer",
+            "common-reveal",
+            "common-animation"
+        ];
+        var cssObjects = [
+            "common"
+        ];
+        cssObjects.forEach((obj) => {
+            var script = document.createElement('link');
+            script.setAttribute('rel', 'stylesheet');
+            script.setAttribute('href', `css/${obj}.css?${version}`);
+            document.head.appendChild(script);
+        });
 
-    <script type="text/javascript" src="js/common-layer.js?2"></script>
-    <script type="text/javascript" src="js/common-reveal.js?2"></script>
-    <script type="text/javascript" src="js/common-animation.js?2"></script>
+        scripts.forEach((obj) => {
+            var script = document.createElement('script');
+            script.setAttribute('type', 'text/javascript');
+            script.setAttribute('src', `js/${obj}.js?${version}`);
+            document.head.appendChild(script);
+        });
+    </script>
 
     <style type="text/css">
         @media screen and (min-width: 1300px) {
@@ -49,30 +68,32 @@
             //canvasCtx.fillRect(50, 50, 100, 100);
         */
 
-        $(document).ready(() => {
-            $(".app-title").html("Deploy Games Simple Virtual TableTop - V:23.02.10.130");
-            $("input[type=number]").blur(function () {
-                var self = $(this);
-                val = parseFloat(self.val());
-                min = parseFloat(self.attr("min"));
-                max = parseFloat(self.attr("max"));
-                if (val > max) {
-                    self.val(max);
-                } else if (val < min) {
-                    self.val(min);
-                }
-                try {
-                    eval(self.attr("lazyblur"));
-                } catch (e) {
-                    console.log(e);
-                }
-            });
-            CreateToggles();
-            ConfigureCanvas();
-            ResetCanvas();
+        setTimeout(() => {
+            $(document).ready(() => {
+                $(".app-title").html("Deploy Games Simple Virtual TableTop - V:23.02.10.260");
+                $("input[type=number]").blur(function () {
+                    var self = $(this);
+                    val = parseFloat(self.val());
+                    min = parseFloat(self.attr("min"));
+                    max = parseFloat(self.attr("max"));
+                    if (val > max) {
+                        self.val(max);
+                    } else if (val < min) {
+                        self.val(min);
+                    }
+                    try {
+                        eval(self.attr("lazyblur"));
+                    } catch (e) {
+                        console.log(e);
+                    }
+                });
+                CreateToggles();
+                ConfigureCanvas();
+                ResetCanvas();
 
-            //$("#modalEvent").modal("show");
-        });
+                //$("#modalEvent").modal("show");
+            });
+        }, 300);
 
         function ResetCanvas() {
             requestAnimationFrame(ResetCanvas);
@@ -269,16 +290,17 @@
                     break;
 
                 case 8: //Up
-                    ExecuteMove(Keys.Up, false, true, rott);
+                    MoveStepsY(1, 1);
+                    //ExecuteMove(Keys.Up, false, true, rott);
                     break;
                 case 9: //Down
-                    ExecuteMove(Keys.Down, false, true, rott);
+                    MoveStepsY(1, -1);
                     break;
                 case 10: //Left
-                    ExecuteMove(Keys.Left, false, true, rott);
+                    MoveStepsX(1, -1);
                     break;
                 case 11: //Right
-                    ExecuteMove(Keys.Right, false, true, rott);
+                    MoveStepsX(1, 1);
                     break;
 
                 case 12: //Configure Objects
@@ -310,7 +332,7 @@
         var TremorTimes = 20;
         var TremorInterval = 25;
         var TremorDirection = 1;
-        var TremorIntensity = 2;
+        var TremorIntensity = 4;
         function ExecuteTremor() {
             TremorTimes--;
             if (TremorTimes <= 0) {

@@ -46,13 +46,16 @@ var DeltaSeconds = 0.0;
 
 var InMoveX = false;
 var InMoveY = false;
-var MoveXYSpeed = 0.2;
+
 var MoveXYLastTime = 0;
 var MoveXAmmount = 0;
 var MoveYAmmount = 0;
 var MoveXPosition = 0.0;
 var MoveYPosition = 0.0;
+
+var MoveXYSpeed = 0.1;
 var MoveXYSpeedMultiplier = 10.0;
+
 var MoveXDirection = 1;
 var MoveYDirection = 1;
 
@@ -241,7 +244,27 @@ function ConfigureWindowMessage() {
                     break;
 
                 case "ExecuteCommand":
-                    ExecuteCommand(parseInt(par01));
+                    var cmd = parseInt(par01);
+                    if (cmd == 12) {
+                        var objData = attrs[1];
+                        var steps = parseInt(objData.Val);
+                        switch (objData.Dir) {
+                            case "X1":
+                                MoveStepsX(steps, -1);
+                                break;
+                            case "X2":
+                                MoveStepsX(steps, 1);
+                                break;
+                            case "Y1":
+                                MoveStepsY(steps, -1);
+                                break;
+                            case "Y2":
+                                MoveStepsY(steps, 1);
+                                break;
+                        }
+                        return;
+                    }
+                    ExecuteCommand(cmd);
                     break;
             }
         }, 100);
@@ -417,13 +440,13 @@ function getFloat(name, def) {
     return value ?? (def ?? 0.0);
 }
 
-function GetImageAsBase64(img) {
+function GetImageAsBase64(img, type = "image/png") {
     var canvas = document.getElementById('saveCanvas');
     var ctx = canvas.getContext('2d');
     canvas.height = img.naturalHeight;
     canvas.width = img.naturalWidth;
     ctx.drawImage(img, 0, 0);
-    return canvas.toDataURL('image/png');
+    return canvas.toDataURL(type);
 }
 
 function AdjustZoom(zoomAmount, zoomFactor) {
@@ -519,7 +542,7 @@ function ConfigureCanvas() {
         curVal += (newVal > 0 ? 0.01 : -0.01);
         numCompZ.val(curVal);
         SetCanvasZoom();
-    });
+    }, { passive: true });
 
     $('html').keydown(function (e) {
         var keyCode = e.which ?? e.keyCode;
@@ -581,23 +604,38 @@ function ExecuteMove(keyCode, shftKey, ctrlKey, rott) {
     switch (keyCode) {
         case Keys.Down:
         case Keys.Up:
-            var calc = (shftKey ? 0 : ((keyCode == Keys.Down) ? -1 : 1) * ammount);
+            var calc = (shftKey ? 0 : ((keyCode == Keys.Down) ? -1 : 1));
+            if (calc == 0) return false;
             if (rott) {
-                currentX += calc;
+                MoveStepsX(1, calc);
+                //currentX += calc;
             } else {
-                currentY += calc;
+                MoveStepsY(1, calc);
+                //currentY += calc;
             }
+            //var calc = (shftKey ? 0 : ((keyCode == Keys.Down) ? -1 : 1) * ammount);
+            //if (rott) {
+            //    currentX += calc;
+            //} else {
+            //    currentY += calc;
+            //}
             return true;
             break;
 
         case Keys.Left:
         case Keys.Right:
-            var calc = (shftKey ? 0 : ((keyCode == (rott ? Keys.Left : Keys.Right)) ? -1 : 1) * ammount);
+            var calc = (shftKey ? 0 : ((keyCode == (rott ? Keys.Left : Keys.Right)) ? -1 : 1));
             if (rott) {
-                currentY += calc;
+                MoveStepsY(1, calc);
             } else {
-                currentX += calc;
+                MoveStepsX(1, calc);
             }
+            //var calc = (shftKey ? 0 : ((keyCode == (rott ? Keys.Left : Keys.Right)) ? -1 : 1) * ammount);
+            //if (rott) {
+            //    currentY += calc;
+            //} else {
+            //    currentX += calc;
+            //}
             return true;
             break;
     }
@@ -647,7 +685,7 @@ function WriteSettings(saveAs = false) {
         Fog: getFloat("numGlobalShow"),
         Color: $("#numColor").val(),
         BackColor: $("#numColorBk").val(),
-        Image: GetImageAsBase64(currentImg),
+        Image: GetImageAsBase64(currentImg, 'image/jpeg'),
         Layers: JSON.stringify(parsedLayers),
         RevealColor: $("#numColorMapReveal").val(),
         Reveals: JSON.stringify(currentRevealList),
