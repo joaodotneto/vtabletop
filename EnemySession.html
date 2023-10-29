@@ -1,0 +1,230 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <link rel="SHORTCUT ICON" href="favicon.ico" />
+    <meta http-equiv="cache-control" content="max-age=0" />
+    <meta http-equiv="cache-control" content="no-cache" />
+    <meta http-equiv="expires" content="0" />
+    <meta http-equiv="expires" content="Tue, 01 Jan 1980 1:00:00 GMT" />
+    <meta http-equiv="pragma" content="no-cache" />
+    <link rel="stylesheet" href="css/bootstrap.min.css" />
+    <script type="text/javascript" src="js/jquery.min.js"></script>
+    <script type="text/javascript" src="js/bootstrap.min.js"></script>
+    <script type="text/javascript" src="MCCommon.js"></script>
+    <script type="text/javascript">
+        function GetData() {
+            return JSON.parse(MCStorage.Read("ENEMY_SESSION", "[]"));
+        }
+
+        function PersistAndReload(objMemory) {
+            MCStorage.Write("ENEMY_SESSION", JSON.stringify(objMemory));
+            LoadList();
+        }
+
+        function SwapElements(array, index1, index2) {
+            let temp = array[index1];
+            array[index1] = array[index2];
+            array[index2] = temp;
+        };
+
+        function AddEnemy() {
+            var txtNam_Enemy = $("#txtNam_Enemy");
+            var txtNam_Attack = $("#txtNam_Attack");
+            var txtNum_Experience = $("#txtNum_Experience");
+            var txtNum_Defense = $("#txtNum_Defense");
+            var txtNum_Life = $("#txtNum_Life");
+
+            var objData = {
+                Nam_Enemy: txtNam_Enemy.val(),
+                Nam_Attack: txtNam_Attack.val(),
+                Num_Experience: txtNum_Experience.val(),
+                Num_Defense: txtNum_Defense.val(),
+                Num_FullLife: txtNum_Life.val(),
+                Num_CurrLife: txtNum_Life.val(),
+            };
+
+            txtNam_Enemy.val("");
+            txtNam_Attack.val("");
+            txtNum_Experience.val("");
+            txtNum_Defense.val("");
+            txtNum_Life.val("");
+
+            var objMemory = GetData();
+            objMemory.push(objData);
+            PersistAndReload(objMemory);
+        }
+
+        function RestartEnemy(idx) {
+            var prompt = confirm("Deseja mesmo Reiniciar os dados deste Inimigo?");
+            if (!prompt) return;
+            var arrData = GetData();
+            arrData[idx].Num_CurrLife = arrData[idx].Num_FullLife;
+            PersistAndReload(arrData);
+        }
+
+        function CloneEnemy(idx) {
+            var prompt = confirm("Deseja mesmo Clonar este Inimigo?");
+            if (!prompt) return;
+            var arrData = GetData();
+            var newOne = JSON.parse(JSON.stringify(arrData[idx]));
+            newOne.Num_CurrLife = newOne.Num_FullLife;
+            arrData.push(newOne);
+            PersistAndReload(arrData);
+        }
+
+        function DeleteEnemy(idx) {
+            var prompt = confirm("Deseja mesmo Excluir este Inimigo?");
+            if (!prompt) return;
+            var arrData = GetData();
+            arrData.splice(idx, 1);
+            PersistAndReload(arrData);
+        }
+
+        function MoveUp(idx) {
+            MoveElement(idx, -1);
+        }
+
+        function MoveDown(idx) {
+            MoveElement(idx, 1);
+        }
+
+        function MoveElement(idx, dir) {
+            var arrData = GetData();
+            var currEntry = idx;
+            var nextEntry = idx + dir;
+            var haveEl = arrData[nextEntry];
+            if (!haveEl) return;
+            SwapElements(arrData, currEntry, nextEntry);
+            PersistAndReload(arrData);
+        }
+
+        function UpdateLife(field, idx) {
+            var arrData = GetData();
+            var currEntry = arrData[idx];
+            var value = parseInt($(field).val());
+            currEntry.Num_CurrLife = Math.min(Math.max(0, currEntry.Num_CurrLife - value), currEntry.Num_FullLife);
+            PersistAndReload(arrData);
+        }
+
+        function LoadList() {
+            var objMemory = GetData();
+            var htmlContent = "";
+            objMemory.forEach((obj, idx) => {
+                var nIdx = idx + 1;
+                var lineColor = obj.Num_CurrLife == 0 ? "background-color: #ffd6d6" : "";
+                htmlContent += `<tr style="${lineColor}">
+                    <td>
+                        <div class="btn-group btn-group-sm" style="display: flex;">
+                            <a class="btn btn-primary" onclick="RestartEnemy(${idx})" title="Reiniciar Inimigo">
+                                <i class="glyphicon glyphicon-refresh"></i>
+                            </a>    
+                            <a class="btn btn-success" onclick="CloneEnemy(${idx})" title="Clonar Inimigo">
+                                <i class="glyphicon glyphicon-arrow-down"></i>
+                            </a>
+                            <a class="btn btn-danger" onclick="DeleteEnemy(${idx})" title="Excluir Inimigo">
+                                <i class="glyphicon glyphicon-remove"></i>
+                            </a>
+                            <a class="btn btn-warning" onclick="MoveUp(${idx})" title="Mover para Cima">
+                                <i class="glyphicon glyphicon-triangle-top"></i>
+                            </a>
+                            <a class="btn btn-warning" onclick="MoveDown(${idx})" title="Mover para Baixo">
+                                <i class="glyphicon glyphicon-triangle-bottom"></i>
+                            </a>
+                        </div>
+                    </td>
+                    <td class='center-mid'>${nIdx}</td>
+                    <td class='mid' style='font-weight: bold'>${obj.Nam_Enemy}</td>
+                    <td class='mid'>${obj.Nam_Attack}</td>
+                    <td class='center-mid'>${obj.Num_Experience}</td>
+                    <td class='center-mid'>${obj.Num_Defense}</td>
+                    <td class='center-mid' style="font-weight: bold;color: blue">${obj.Num_FullLife}</td>
+                    <td class='center-mid'>${obj.Num_CurrLife}</td>
+                    <td><input type="number" id="txtNum_CurrLife${idx}" onblur="UpdateLife('#txtNum_CurrLife${idx}', ${idx})" class="form-control input-sm" /></td>
+                    <td></td>
+                </tr>`;
+            });
+            $("#tbEnemies").html(htmlContent);
+        }
+
+        $(document).ready(() => {
+            LoadList();
+        });
+    </script>
+    <style type="text/css">
+        .mid {
+            vertical-align: middle !important;
+        }
+
+        .center-mid {
+            text-align: center !important;
+            vertical-align: middle !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <h4><b>Inimigos da Sessão</b></h4>
+        <table style="width: 100%">
+            <tr>
+                <td style="width: 250px;">
+                    <label>Nome</label>
+                    <input type="text" id="txtNam_Enemy" class="form-control input-sm" />
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td style="width: 250px">
+                    <label>Ataque Principal</label>
+                    <input type="text" id="txtNam_Attack" class="form-control input-sm" />
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td style="width: 100px">
+                    <label>Exp.</label>
+                    <input type="number" id="txtNum_Experience" class="form-control input-sm" />
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td style="width: 100px">
+                    <label>Defesa</label>
+                    <input type="number" id="txtNum_Defense" class="form-control input-sm" />
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td style="width: 100px">
+                    <label>Vida</label>
+                    <input type="number" id="txtNum_Life" class="form-control input-sm" />
+                </td>
+                <td style="width: 8px">&nbsp;</td>
+                <td style="width: 100px">
+                    <label>&nbsp;</label>
+                    <div class="input-group input-group-sm">
+                        <div class="input-group-btn">
+                            <div class="btn-group btn-group-sm">
+                                <a class="btn btn-success" onclick="AddEnemy()" title="Adicionar Inimigo">
+                                    <i class="glyphicon glyphicon-arrow-down"></i>&nbsp;Adicionar
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td></td>
+            </tr>
+        </table>
+        <table style="width: 100%;margin-top: 10px" class="table table-bordered table-condensed table-striped">
+            <thead>
+                <tr style="background-color: #eee">
+                    <th style="width: 50px;text-align: center"></th>
+                    <th style="width: 50px;text-align: center"></th>
+                    <th style="width: 350px;text-align: center">Nome</th>
+                    <th style="width: 350px;text-align: center">Ataque Principal</th>
+                    <th style="width: 100px;text-align: center">Exp.</th>
+                    <th style="width: 100px;text-align: center">Defesa</th>
+                    <th style="width: 100px;text-align: center">Vida Total</th>
+                    <th style="width: 100px;text-align: center">Vida Atual</th>
+                    <th style="width: 100px;text-align: center">Atualização</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="tbEnemies">
+            </tbody>
+        </table>
+    </div>
+
+</body>
+</html>
