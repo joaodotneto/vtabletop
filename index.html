@@ -136,8 +136,10 @@
                 canvasCtx.translate(-centerX, -centerY);
             }
 
-            //Parallax
-            RenderParallax();
+            if (!parallaxOverBackground) {
+                //Parallax
+                RenderParallax();
+            }
 
             MoveXY();
             var currX = (currentX + cmpX) + MoveXPosition;
@@ -150,6 +152,10 @@
                 } catch (e) {
                     console.error(e);
                 }
+            }
+
+            if (parallaxOverBackground) {
+                RenderParallax();
             }
 
             //Layers

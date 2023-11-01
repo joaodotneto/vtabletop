@@ -41,6 +41,8 @@
                 Num_Defense: txtNum_Defense.val(),
                 Num_FullLife: txtNum_Life.val(),
                 Num_CurrLife: txtNum_Life.val(),
+                Des_Scene: "",
+                Des_Index: ""
             };
 
             txtNam_Enemy.val("");
@@ -98,11 +100,34 @@
             PersistAndReload(arrData);
         }
 
-        function UpdateLife(field, idx) {
+        function UpdateLife(idx) {
+            var field = `#txtNum_CurrLife${idx}`;
             var arrData = GetData();
             var currEntry = arrData[idx];
             var value = parseInt($(field).val());
             currEntry.Num_CurrLife = Math.min(Math.max(0, currEntry.Num_CurrLife - value), currEntry.Num_FullLife);
+            PersistAndReload(arrData);
+        }
+
+        function UpdateInfo(idx) {
+            var fieldScene = `#txtDes_Scene${idx}`;
+            var fieldIndex = `#txtDes_Index${idx}`;
+            var arrData = GetData();
+            var currEntry = arrData[idx];
+            currEntry.Des_Scene = $(fieldScene).val();
+            currEntry.Des_Index = $(fieldIndex).val();
+            PersistAndReload(arrData);
+        }
+
+        function UpdateNumbers(idx, name, desc, exp, def, fullLife, currLife) {
+            var arrData = GetData();
+            var currEntry = arrData[idx];
+            currEntry.Nam_Enemy = name ?? currEntry.Nam_Enemy;
+            currEntry.Nam_Attack = desc ?? currEntry.Nam_Attack;
+            currEntry.Num_Experience = exp ?? currEntry.Num_Experience;
+            currEntry.Num_Defense = def ?? currEntry.Num_Defense;
+            currEntry.Num_FullLife = fullLife ?? currEntry.Num_FullLife;
+            currEntry.Num_CurrLife = currLife ?? currEntry.Num_CurrLife;
             PersistAndReload(arrData);
         }
 
@@ -111,7 +136,9 @@
             var htmlContent = "";
             objMemory.forEach((obj, idx) => {
                 var nIdx = idx + 1;
-                var lineColor = obj.Num_CurrLife == 0 ? "background-color: #ffd6d6" : "";
+                var lineColor = (obj.Num_CurrLife > 0 && obj.Num_CurrLife <= obj.Num_FullLife / 2 ? "background-color: #fff0d5" :
+                    (obj.Num_CurrLife == 0 ? "background-color: #ffd6d6" : ""));
+
                 htmlContent += `<tr style="${lineColor}">
                     <td>
                         <div class="btn-group btn-group-sm" style="display: flex;">
@@ -133,13 +160,15 @@
                         </div>
                     </td>
                     <td class='center-mid'>${nIdx}</td>
+                    <td class='center-mid'><input type="text" id="txtDes_Scene${idx}" onblur="UpdateInfo(${idx})" class="form-control input-sm" value="${(obj.Des_Scene ?? "")}" /></td>
+                    <td class='center-mid'><input type="text" id="txtDes_Index${idx}" onblur="UpdateInfo(${idx})" class="form-control input-sm" value="${(obj.Des_Index ?? "")}" /></td>
                     <td class='mid' style='font-weight: bold'>${obj.Nam_Enemy}</td>
                     <td class='mid'>${obj.Nam_Attack}</td>
                     <td class='center-mid'>${obj.Num_Experience}</td>
                     <td class='center-mid'>${obj.Num_Defense}</td>
                     <td class='center-mid' style="font-weight: bold;color: blue">${obj.Num_FullLife}</td>
                     <td class='center-mid'>${obj.Num_CurrLife}</td>
-                    <td><input type="number" id="txtNum_CurrLife${idx}" onblur="UpdateLife('#txtNum_CurrLife${idx}', ${idx})" class="form-control input-sm" /></td>
+                    <td><input type="number" id="txtNum_CurrLife${idx}" onblur="UpdateLife(${idx})" class="form-control input-sm" /></td>
                     <td></td>
                 </tr>`;
             });
@@ -211,6 +240,8 @@
                 <tr style="background-color: #eee">
                     <th style="width: 50px;text-align: center"></th>
                     <th style="width: 50px;text-align: center"></th>
+                    <th style="width: 100px;text-align: center">Cena</th>
+                    <th style="width: 100px;text-align: center">Índice</th>
                     <th style="width: 350px;text-align: center">Nome</th>
                     <th style="width: 350px;text-align: center">Ataque Principal</th>
                     <th style="width: 100px;text-align: center">Exp.</th>

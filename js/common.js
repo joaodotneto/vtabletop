@@ -94,6 +94,8 @@ var currentAnimationInstanceList = [];
 var currentAnimationInstance = null;
 var currentAnimationInstanceIndex = null;
 
+var parallaxOverBackground = false;
+
 const OpenJsonFile = async (callback) => {
     try {
         [LastOpenedHandle] = await window.showOpenFilePicker(FileOptions);
@@ -192,6 +194,7 @@ function ConfigureWindowMessage() {
                     break;
 
                 case "OpenFile":
+                    debugger;
                     ParseAndApplySettings(par01);
                     break;
 
@@ -691,6 +694,7 @@ function WriteSettings(saveAs = false) {
         Reveals: JSON.stringify(currentRevealList),
         Animations: JSON.stringify(currentAnimationList),
         AnimInstances: JSON.stringify(currentAnimationInstanceList),
+        ParallaxOverBackground: parallaxOverBackground,
         Parallax: {
             Anim: chkVal("chkParallaxAnim"),
             Dir: chkVal("chkParallaxRtl"),
@@ -764,6 +768,8 @@ function ParseAndApplySettings(result) {
     $("#chkShowGrid").prop("checked", objInp.G);
     $("#chkShowCoords").prop("checked", (objInp.Coords ?? false));
 
+    parallaxOverBackground = objInp.ParallaxOverBackground ?? false;
+
     if (objInp.Parallax) {
         var objP = objInp.Parallax;
         $("#numkParallaxSpeed").val(objP.Spd);
@@ -829,7 +835,7 @@ function ParseAndApplySettings(result) {
 
 function RefreshSelectList(lstName, collection, propText, propValue, keepSelection = true) {
     var lstControl = $(`#${lstName}`)[0];
-
+    if (!lstControl) return;
     var currentSelection = lstControl.selectedIndex;
     lstControl.length = 0;
     collection.forEach((obj) => {
