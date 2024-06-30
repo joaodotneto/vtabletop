@@ -41,11 +41,11 @@
 
     <title></title>
     <script type="text/javascript">
-        setTimeout(() => {
-            $(document).ready(ExecuteStart);
-        }, 800);
-
-        
+        $(document).ready(() => {
+            setTimeout(() => {
+                ExecuteStart();
+            }, 800);
+        });
     </script>
     <style type="text/css">
         .reveal-panel {
