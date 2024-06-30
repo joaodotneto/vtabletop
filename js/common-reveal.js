@@ -80,6 +80,48 @@ function ChangeCurrentMapReveal() {
     RefreshMapRevealList(true);
 }
 
+function ReorderRevealList() {
+    var newRevealList = [];
+    [...$("#lstMapReveals").children()].map(x => x.value).forEach((y, idx) => {
+        var obj = currentRevealList.find(x => x.name == y);
+        obj.index = idx;
+        newRevealList.push(obj);
+    });
+    currentRevealList = newRevealList;
+}
+
+function MoverRevealUp() {
+    var lstLayers = $("#lstMapReveals")[0];
+    var idx = lstLayers.selectedIndex;
+    if (idx > 0) {
+        var nxt = idx - 1;
+        var opt = lstLayers.options[idx];
+        var opB = lstLayers.options[nxt];
+        lstLayers.removeChild(opt);
+        lstLayers.insertBefore(opt, opB);
+    }
+    ReorderRevealList();
+}
+
+function MoverRevealDown() {
+    var lstLayers = $("#lstMapReveals")[0];
+    var idx = lstLayers.selectedIndex;
+    var tot = (lstLayers.length - 1);
+    if (idx < tot) {
+        var opt = lstLayers.options[idx];
+        var nxt = 0;
+        if ((idx + 1) == tot) {
+            nxt = tot;
+            lstLayers.appendChild(opt);
+        } else {
+            nxt = idx + 2;
+            var opB = lstLayers.options[idx + 2];
+            lstLayers.insertBefore(opt, opB);
+        }
+    }
+    ReorderRevealList();
+}
+
 function MoveRevealItem(idx) {
     var currentReveal = GetSelectedMapReveal();
     if (!currentReveal) return;
